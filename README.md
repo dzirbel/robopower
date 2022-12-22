@@ -10,7 +10,7 @@ For game rules, see the [rule book](/rulebook.pdf).
 
 Players (as implementations of [Player](/lib/src/main/kotlin/com/dzirbel/robopower/Player.kt))
 should be added in their own module (like [player-dominic](/player-dominic)). The easiest way to
-setup a module is to copy from another one, but it must minimally consist of a `build.gradle.kts`
+set up a module is to copy from another one, but it must minimally consist of a `build.gradle.kts`
 file and code in `src/main/kotlin` (or `../java`). The module must also be added to
 `settings.gradle.kts` and as a dependency in `/runner/build.gradle.kts`. Players may not be placed
 in `/lib`, since fields like other players' cards are restricted as `internal` (players are also
