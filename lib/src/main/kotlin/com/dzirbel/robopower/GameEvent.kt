@@ -22,7 +22,8 @@ sealed interface GameEvent {
     }
 
     /**
-     * Emitted when [upPlayerIndex] ends their turn, after the duel (but before [Game.upPlayer] is moved to the next player).
+     * Emitted when [upPlayerIndex] ends their turn, after the duel (but before [Game.upPlayer] is moved to the next
+     * player).
      */
     data class EndTurn(override val turnCount: Int, override val upPlayerIndex: Int) : GameEvent {
         constructor(game: Game) : this(turnCount = game.turnCount, upPlayerIndex = game.upPlayerIndex)
