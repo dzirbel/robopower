@@ -1,5 +1,7 @@
 ## Robo Power
 
+[![Build status](https://github.com/dzirbel/robopower/workflows/Build/badge.svg)](https://github.com/dzirbel/robopower/actions/workflows/build.yml)
+
 Robo Power© is a simple card game invented by my brother [Alex Zirbel](https://github.com/azirbel)
 at the precocious age of 8. This project is an implementation of the game mechanics (in
 [/lib](/lib)) and various AI players (in various `/player-*` modules).
