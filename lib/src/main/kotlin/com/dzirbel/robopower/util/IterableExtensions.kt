@@ -53,6 +53,7 @@ fun <T, R : Comparable<R>> Iterable<T>.indexOfMaxOrNull(selector: (T) -> R?): In
     var maxValue: R? = null
     forEachIndexed { index, element ->
         val value = selector(element)
+        @Suppress("UnsafeCallOnNullableType")
         if (value != null && (maxValue == null || value > maxValue!!)) {
             maxIndex = index
             maxValue = value
@@ -71,6 +72,7 @@ fun <T, R : Comparable<R>> Iterable<T>.indexOfMinOrNull(selector: (T) -> R?): In
     var maxValue: R? = null
     forEachIndexed { index, element ->
         val value = selector(element)
+        @Suppress("UnsafeCallOnNullableType")
         if (value != null && (maxValue == null || value < maxValue!!)) {
             maxIndex = index
             maxValue = value

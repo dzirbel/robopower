@@ -50,9 +50,10 @@ class GameImpl(
     private val eventListeners: MutableList<(GameEvent) -> Unit> = mutableListOf()
 
     private val playerCardSuppliers: List<Dueler.PlayerCardSupplier.FromPlayerAndDeck> by lazy {
-        players.map {
+        players.map { player ->
             Dueler.PlayerCardSupplier.FromPlayerAndDeck(
-                player = it, deck = deck,
+                player = player,
+                deck = deck,
                 onDeckReshuffled = { previousDiscard ->
                     emitEvent(GameEvent.DiscardPileReshuffledIntoDrawPile(this, previousDiscard))
                 },
@@ -103,7 +104,7 @@ class GameImpl(
 
     private fun draw() {
         val (card, previousDiscard) = deck.draw()
-        previousDiscard?.let {
+        if (previousDiscard != null) {
             emitEvent(GameEvent.DiscardPileReshuffledIntoDrawPile(game = this, previousDiscard = previousDiscard))
         }
 
@@ -172,6 +173,7 @@ class GameImpl(
         assertGameInvariants()
     }
 
+    @Suppress("CanBeNonNullable")
     private fun checkGameResult(previouslyActivePlayers: Set<Int>?): GameResult? {
         return when (activePlayerCount) {
             0 -> GameResult.Tied(game = this, tiedPlayers = requireNotNull(previouslyActivePlayers))

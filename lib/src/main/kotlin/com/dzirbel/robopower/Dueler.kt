@@ -89,8 +89,10 @@ object Dueler {
      * Runs a duel among the given [players] and returns a [DuelResult] with a complete record of the cards played in
      * each round and the resulting actions (cards trapped, discarded, etc).
      *
+     * @param players the [PlayerCardSupplier]s providing each round of cards in the duel
      * @param onRound callback invoked after each [DuelRound] is played
      */
+    @Suppress("ReturnCount")
     fun duel(players: List<PlayerCardSupplier>, onRound: (DuelRound) -> Unit = {}): DuelResult {
         val rounds = mutableListOf<DuelRound>()
 
@@ -136,7 +138,7 @@ object Dueler {
             onRound(round)
 
             when (roundResult) {
-                is DuelRoundResult.LowestLost -> {
+                is DuelRoundResult.LowestLost ->
                     if (trapping) {
                         // previous round was a trap, so this was resolving the trap and now all cards in play go to the
                         // winner (so we need to look for the highest card rather than lowest)
@@ -174,7 +176,6 @@ object Dueler {
                             drawnCards = drawnCards,
                         )
                     }
-                }
 
                 is DuelRoundResult.Counteracted ->
                     return DuelResult(
@@ -244,7 +245,7 @@ object Dueler {
             val trappers: Map<Int, Card> = playedCards.filterValues { it.isTrap }
             when {
                 // no traps (or counteracts): the lowest card loses; if tied double duel
-                trappers.isEmpty() -> {
+                trappers.isEmpty() ->
                     if (trapping) {
                         // if already trapping, instead find the highest card(s) to win the trap
                         val winners: Set<Int> = playedCards.maxKeysBy(Card.comparatorByScore)
@@ -259,7 +260,7 @@ object Dueler {
                         } else {
                             DuelRoundResult.DoubleDuel(
                                 trapping = false,
-                                doubleDuelers = playedCards.filterKeys { playerIndex -> playerIndex in winners }
+                                doubleDuelers = playedCards.filterKeys { playerIndex -> playerIndex in winners },
                             )
                         }
                     } else {
@@ -275,11 +276,10 @@ object Dueler {
                         } else {
                             DuelRoundResult.DoubleDuel(
                                 trapping = false,
-                                doubleDuelers = playedCards.filterKeys { playerIndex -> playerIndex in losers }
+                                doubleDuelers = playedCards.filterKeys { playerIndex -> playerIndex in losers },
                             )
                         }
                     }
-                }
 
                 // a single trap: everything else is trapped
                 trappers.size == 1 ->

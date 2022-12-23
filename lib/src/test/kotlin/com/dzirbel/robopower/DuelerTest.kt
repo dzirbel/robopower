@@ -248,8 +248,8 @@ class DuelerTest {
 
         val totalInputCards = cards.sumOf { it.size }
         val totalResultCards = result.discardedCards.values.sumOf { it.size } +
-                result.retainedCards.values.sumOf { it.size } +
-                result.trappedCards.values.sumOf { trappedCardByPlayer -> trappedCardByPlayer.values.sumOf { it.size } }
+            result.retainedCards.values.sumOf { it.size } +
+            result.trappedCards.values.sumOf { trappedCardByPlayer -> trappedCardByPlayer.values.sumOf { it.size } }
         assertEquals(totalInputCards, totalResultCards)
     }
 

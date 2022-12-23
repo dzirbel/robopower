@@ -40,7 +40,7 @@ comments:
     active: true
     matchTypeParameters: true
     matchDeclarationsOrder: true
-    allowParamOnConstructorProperties: false
+    allowParamOnConstructorProperties: true
   UndocumentedPublicClass:
     active: false
     searchInNestedClass: true
@@ -547,7 +547,7 @@ potential-bugs:
     ignoreReturnValueAnnotations:
       - '*.CanIgnoreReturnValue'
   ImplicitDefaultLocale:
-    active: true
+    active: false
   ImplicitUnitReturnType:
     active: false
     allowExplicitReturnType: true
@@ -636,10 +636,8 @@ style:
     imports: []
     forbiddenPatterns: ''
   ForbiddenMethodCall:
-    active: true
-    methods:
-      - 'kotlin.io.print'
-      - 'kotlin.io.println'
+    active: false
+    methods: []
   ForbiddenSuppress:
     active: false
     rules: []
@@ -667,7 +665,7 @@ style:
     ignoreCompanionObjectPropertyDeclaration: true
     ignoreAnnotation: false
     ignoreNamedArgument: false
-    ignoreEnums: false
+    ignoreEnums: true
     ignoreRanges: false
     ignoreExtensionFunctions: false
   MandatoryBracesIfStatements:

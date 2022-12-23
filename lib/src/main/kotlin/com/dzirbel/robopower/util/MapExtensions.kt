@@ -9,14 +9,15 @@ internal fun <K, V> Map<K, V>.maxKeysBy(comparator: Comparator<V>): Set<K> {
 
     val first = iterator.next()
     var maxValue = first.value
-    var maxKeys = mutableSetOf(first.key)
+    val maxKeys = mutableSetOf(first.key)
 
     while (iterator.hasNext()) {
         val (key, value) = iterator.next()
         val comparison = comparator.compare(value, maxValue)
         if (maxValue == null || comparison > 0) {
             maxValue = value
-            maxKeys = mutableSetOf(key)
+            maxKeys.clear()
+            maxKeys.add(key)
         } else if (comparison == 0) {
             maxKeys.add(key)
         }

@@ -96,16 +96,16 @@ sealed interface GameEvent {
         val spiedPlayerIndex: Int,
         val remainingCards: Int,
     ) : GameEvent {
+        init {
+            assert(upPlayerIndex != spiedPlayerIndex)
+        }
+
         constructor(game: Game, spied: Int, remainingCards: Int) : this(
             turnCount = game.turnCount,
             upPlayerIndex = game.upPlayerIndex,
             spiedPlayerIndex = spied,
             remainingCards = remainingCards,
         )
-
-        init {
-            assert(upPlayerIndex != spiedPlayerIndex)
-        }
     }
 
     /**

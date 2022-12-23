@@ -5,13 +5,11 @@ import kotlin.random.Random
 /**
  * Manages the draw and discard piles of a deck of [Card]s.
  */
-class Deck internal constructor(
-    drawPile: List<Card>,
-    discardPile: List<Card> = emptyList(),
+class Deck(
     private val random: Random = Random.Default,
+    drawPile: List<Card> = Card.deck.shuffled(random),
+    discardPile: List<Card> = emptyList(),
 ) {
-    constructor(random: Random = Random.Default) : this(drawPile = Card.deck.shuffled(random), random = random)
-
     private val drawPile: MutableList<Card> = drawPile.toMutableList()
     private val _discardPile: MutableList<Card> = discardPile.toMutableList()
 
@@ -80,5 +78,5 @@ class Deck internal constructor(
         return previousDiscard
     }
 
-    class DeckExhaustedException internal constructor(): Throwable("There are no cards in the draw or discard piles")
+    class DeckExhaustedException internal constructor() : Throwable("There are no cards in the draw or discard piles")
 }

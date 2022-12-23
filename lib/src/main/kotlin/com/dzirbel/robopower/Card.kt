@@ -30,7 +30,8 @@ enum class Card(val cardName: String, val score: Int?, val spyCount: Int = 0, va
     SLICE(cardName = "Slice", score = 160, multiplicity = 3),
     UN_BEAT(cardName = "Un-Beat", score = 200, multiplicity = 2),
     COPY(cardName = "Copy", score = 205, multiplicity = 2),
-    ROBO_STRIKER(cardName = "Robo Striker", score = 210, multiplicity = 1);
+    ROBO_STRIKER(cardName = "Robo Striker", score = 210, multiplicity = 1),
+    ;
 
     /**
      * Whether this card is the special Trap card; if so its [score] should be ignored.

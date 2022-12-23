@@ -3,8 +3,8 @@ package com.dzirbel.robopower
 import kotlin.time.ExperimentalTime
 import kotlin.time.TimeSource
 
-const val totalGames = 100_000
-const val increment = 5_000
+const val TOTAL_GAMES = 100_000
+const val INCREMENT = 5_000
 
 // TODO allow randomizing player order in each game
 val players: List<Player.Factory> = listOf(
@@ -30,7 +30,7 @@ fun main() {
 
     val start = TimeSource.Monotonic.markNow()
 
-    repeat(totalGames) { round ->
+    repeat(TOTAL_GAMES) { round ->
         val gameResult = try {
             GameImpl(playerFactories = players).run()
         } catch (ex: PlayerChoiceException) {
@@ -38,7 +38,7 @@ fun main() {
             playerChoiceExceptionExamples.putIfAbsent(playerIndex, ex)
             playerChoiceExceptions.add(playerIndex)
             null
-        } catch(ex: PlayerThrownException) {
+        } catch (ex: PlayerThrownException) {
             val playerIndex = ex.player.playerIndex
             playerThrownExceptionExamples.putIfAbsent(playerIndex, ex)
             playerThrownExceptions.add(playerIndex)
@@ -60,15 +60,15 @@ fun main() {
             null -> {}
         }
 
-        if (round > 0 && round % increment == 0) {
-            println("$round / $totalGames [${start.elapsedNow()}]")
+        if (round > 0 && round % INCREMENT == 0) {
+            println("$round / $TOTAL_GAMES [${start.elapsedNow()}]")
         }
     }
 
     val elapsed = start.elapsedNow()
 
     println()
-    println("Ran $totalGames games in $elapsed (${elapsed / totalGames} per game)")
+    println("Ran $TOTAL_GAMES games in $elapsed (${elapsed / TOTAL_GAMES} per game)")
     println("$engineExceptions exceptions from the engine")
     engineExceptionExample?.let { example ->
         println()
@@ -82,7 +82,10 @@ fun main() {
     repeat(players.size) { playerIndex ->
         val wins = winCounts.count(playerIndex)
         val ties = tieCounts.count(playerIndex)
-        println("  Player ${playerIndex + 1} : $wins wins (${formatPercent(wins, totalGames)}); $ties ties (${formatPercent(ties, totalGames)})")
+        println(
+            "  Player ${playerIndex + 1} : $wins wins (${formatPercent(wins, TOTAL_GAMES)}); " +
+                "$ties ties (${formatPercent(ties, TOTAL_GAMES)})",
+        )
 
         println("  > Invalid choices:   ${playerChoiceExceptions.count(playerIndex)}")
         playerChoiceExceptionExamples[playerIndex]?.let { example ->
@@ -101,7 +104,7 @@ fun main() {
 
         println()
     }
-    println("Total ties : $totalTies (${formatPercent(totalTies, totalGames)})")
+    println("Total ties : $totalTies (${formatPercent(totalTies, TOTAL_GAMES)})")
 }
 
 private fun formatPercent(wins: Int, total: Int): String {
