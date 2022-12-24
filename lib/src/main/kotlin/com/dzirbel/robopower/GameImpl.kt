@@ -95,11 +95,11 @@ class GameImpl(
             }
         }
 
-        assertGameInvariants()
-
         while (maxRounds == null || turnCount < maxRounds) {
             turnCount++
+
             emitEvent(GameEvent.StartTurn(game = this))
+            assertGameInvariants()
 
             draw()
             discard()?.let { return it }
@@ -208,7 +208,7 @@ class GameImpl(
         } else {
             null
         }
-            .also { assertGameInvariants() }
+            .also { assertGameInvariants(afterDuel = true) }
     }
 
     private fun emitEvent(event: GameEvent) {
@@ -216,7 +216,7 @@ class GameImpl(
         eventListeners.forEach { it(event) }
     }
 
-    private fun assertGameInvariants() {
+    private fun assertGameInvariants(afterDuel: Boolean = false) {
         ifAssertionsEnabled {
             // TODO add more game invariants: for each GameEvent, etc
 
@@ -229,13 +229,14 @@ class GameImpl(
             // case this happens before discards this turn); until it has been reshuffled
             assert(reshuffled || deck.discardPileSize >= 2 * (turnCount - 1))
 
-            // player whose is up is still in the game (if there are any active players)
-            assert(activePlayerCount == 0 || upPlayer.isActive)
+            // player whose is up is still in the game (if there are any active players and this is not immediately
+            // after the duel where they may have been eliminated)
+            assert(afterDuel || activePlayerCount == 0 || upPlayer.isActive)
 
             // number of StartTurn events is equal to the turnCount
             assert(_eventLog.count { it is GameEvent.StartTurn } == turnCount)
 
-            // number of StartTurn events is equal to the turnCount minus 1
+            // number of EndTurn events is equal to the turnCount minus 1
             assert(_eventLog.count { it is GameEvent.EndTurn } == (turnCount - 1).coerceAtLeast(0))
 
             // activePlayerCount is accurate
