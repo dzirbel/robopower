@@ -1,6 +1,7 @@
 package com.dzirbel.robopower
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
 
@@ -12,14 +13,11 @@ class GameImplTest {
 
     @Test
     fun `trivial one-on-one game runs successfully`() {
-        val sortedCards = Card.values()
-            .filter { it.isNormal }
-            .sortedBy { it.score }
-            .flatMap { card -> List(card.multiplicity) { card } }
+        val sortedNormalCards = Card.deck.filter { it.isNormal }.sortedBy { it.score }
         val game = buildGame(
             playerFactories = listOf(InOrderPlayer, InOrderPlayer),
-            sortedCards.take(12), // player 1 gets the 12 lowest cards (weakest first)
-            sortedCards.takeLast(12).reversed(), // player 2 gets the 12 highest cards (strongest first)
+            sortedNormalCards.take(12), // player 1 gets the 12 lowest cards (weakest first)
+            sortedNormalCards.takeLast(12).reversed(), // player 2 gets the 12 highest cards (strongest first)
         )
 
         val result = game.run()
@@ -27,56 +25,45 @@ class GameImplTest {
         assertEquals(1, (result as GameResult.Winner).winner)
         assertEquals(GameImpl.STARTING_CARDS, game.turnCount) // 1 turn for each starting card
 
-        game.eventLog.forEach {
-            println(it)
-        }
-
         // note discarded and played cards by player 2 are cycled because retaining them puts them at the end of the
         // hand (new cards are also drawn to the end of the hand)
-        assertEquals(
-            listOf(
-                eventsForTurn(
-                    turnCount = 1,
-                    upPlayerIndex = 0,
-                    discard = Card.BUZZY,
-                    duelResult = buildSimpleDuelResult(loser = 0 to Card.BUZZY, winner = 1 to Card.ROBO_STRIKER),
-                ),
-                eventsForTurn(
-                    turnCount = 2,
-                    upPlayerIndex = 1,
-                    discard = Card.COPY,
-                    duelResult = buildSimpleDuelResult(loser = 0 to Card.BUZZY, winner = 1 to Card.COPY),
-                ),
-                eventsForTurn(
-                    turnCount = 3,
-                    upPlayerIndex = 0,
-                    discard = Card.BUZZY,
-                    duelResult = buildSimpleDuelResult(loser = 0 to Card.BUZZY, winner = 1 to Card.UN_BEAT),
-                ),
-                eventsForTurn(
-                    turnCount = 4,
-                    upPlayerIndex = 1,
-                    discard = Card.UN_BEAT,
-                    duelResult = buildSimpleDuelResult(loser = 0 to Card.BUZZY, winner = 1 to Card.SLICE),
-                ),
-                eventsForTurn(
-                    turnCount = 5,
-                    upPlayerIndex = 0,
-                    discard = Card.WIND,
-                    duelResult = buildSimpleDuelResult(loser = 0 to Card.WIND, winner = 1 to Card.ROBO_STRIKER),
-                ),
-                eventsForTurn(
-                    turnCount = 6,
-                    upPlayerIndex = 1,
-                    discard = Card.SLICE,
-                    duelResult = buildSimpleDuelResult(loser = 0 to Card.WIND, winner = 1 to Card.COPY),
-                )
-                    .filter { it !is GameEvent.EndTurn },
-            )
-                .flatten()
-                .plus(GameEvent.PlayerEliminated(turnCount = 6, upPlayerIndex = 1, eliminatedPlayerIndex = 0)),
-            game.eventLog,
+        val eventLog = buildEventLog {
+            turnEvents(0, discard = Card.BUZZY, loser = 0 to Card.BUZZY, winner = 1 to Card.ROBO_STRIKER)
+            turnEvents(1, discard = Card.COPY, loser = 0 to Card.BUZZY, winner = 1 to Card.COPY)
+            turnEvents(0, discard = Card.BUZZY, loser = 0 to Card.BUZZY, winner = 1 to Card.UN_BEAT)
+            turnEvents(1, discard = Card.UN_BEAT, loser = 0 to Card.BUZZY, winner = 1 to Card.SLICE)
+            turnEvents(0, discard = Card.WIND, loser = 0 to Card.WIND, winner = 1 to Card.ROBO_STRIKER)
+            turnEvents(1, discard = Card.SLICE, loser = 0 to Card.WIND, winner = 1 to Card.COPY, endTurn = false)
+            add(GameEvent.PlayerEliminated(turnCount = turn, upPlayerIndex = 1, eliminatedPlayerIndex = 0))
+        }
+
+        assertEquals(eventLog, game.eventLog)
+    }
+
+    @Test
+    fun `single round with spy`() {
+        val game = buildGame(
+            playerFactories = listOf(InOrderPlayer, InOrderPlayer),
+            listOf(Card.SPY, Card.SLICE, Card.BUZZY, Card.BUZZY, Card.BUZZY, Card.BUZZY, Card.BUZZY),
+            listOf(Card.ROBO_STRIKER, Card.WIND, Card.WIND, Card.WIND, Card.WIND, Card.WIND),
         )
+
+        val result = game.run(maxRounds = 1)
+
+        assertNull(result)
+        assertEquals(1, game.turnCount)
+
+        val eventLog = buildEventLog {
+            turnEvents(
+                upPlayer = 0,
+                discard = Card.SPY,
+                spiedAndRemaining = 1 to 5, // player index 1 spied with 5 cards remaining afterward
+                loser = 1 to Card.WIND,
+                winner = 0 to Card.SLICE,
+            )
+        }
+
+        assertEquals(eventLog, game.eventLog)
     }
 
     /**
@@ -117,42 +104,89 @@ class GameImplTest {
         return GameImpl(playerFactories = playerFactories, deck = deck, random = allZeroRandom)
     }
 
-    /**
-     * Generates the regular events (no spies, etc) for a single game turn with the given parameters.
-     */
-    private fun eventsForTurn(
-        turnCount: Int,
-        upPlayerIndex: Int,
-        discard: Card,
-        duelResult: DuelResult,
-    ): List<GameEvent> {
-        return listOf(
-            GameEvent.StartTurn(turnCount = turnCount, upPlayerIndex = upPlayerIndex),
-            GameEvent.PlayerDraw(turnCount = turnCount, upPlayerIndex = upPlayerIndex),
-            GameEvent.PlayerDiscard(turnCount = turnCount, upPlayerIndex = upPlayerIndex, discardedCard = discard),
-            GameEvent.AfterDuelRound(
-                turnCount = turnCount,
-                upPlayerIndex = upPlayerIndex,
-                round = duelResult.rounds.first(),
-            ),
-            GameEvent.Duel(turnCount = turnCount, upPlayerIndex = upPlayerIndex, result = duelResult),
-            GameEvent.EndTurn(turnCount = turnCount, upPlayerIndex = upPlayerIndex),
-        )
+    private fun buildEventLog(builder: EventLogBuilder.() -> Unit): List<GameEvent> {
+        return EventLogBuilder().apply(builder).build()
     }
 
-    /**
-     * Builds a simple [DuelResult] where a two players dueled with normal cards and did not tie.
-     */
-    private fun buildSimpleDuelResult(loser: Pair<Int, Card>, winner: Pair<Int, Card>): DuelResult {
-        return DuelResult(
-            rounds = listOf(
-                DuelRound(
-                    playedCards = mapOf(loser, winner),
-                    result = DuelRoundResult.LowestLost(losers = mapOf(loser), winners = mapOf(winner)),
+    private class EventLogBuilder {
+        var turn = 0
+            private set
+        private val events = mutableListOf<GameEvent>()
+
+        fun turnEvents(
+            upPlayer: Int,
+            discard: Card,
+            winner: Pair<Int, Card>,
+            loser: Pair<Int, Card>,
+            spiedAndRemaining: Pair<Int, Int>? = null,
+            endTurn: Boolean = true,
+        ) {
+            val duelResult = buildSimpleDuelResult(loser = loser, winner = winner)
+            turnEvents(
+                upPlayer = upPlayer,
+                discard = discard,
+                duelResult = duelResult,
+                spiedAndRemaining = spiedAndRemaining,
+                endTurn = endTurn,
+            )
+        }
+
+        fun turnEvents(
+            upPlayer: Int,
+            discard: Card,
+            duelResult: DuelResult,
+            spiedAndRemaining: Pair<Int, Int>? = null,
+            endTurn: Boolean = true,
+        ) {
+            turn++
+
+            add(GameEvent.StartTurn(turnCount = turn, upPlayerIndex = upPlayer))
+            add(GameEvent.PlayerDraw(turnCount = turn, upPlayerIndex = upPlayer))
+            add(GameEvent.PlayerDiscard(turnCount = turn, upPlayerIndex = upPlayer, discardedCard = discard))
+
+            if (spiedAndRemaining != null) {
+                add(
+                    GameEvent.Spied(
+                        turnCount = turn,
+                        upPlayerIndex = upPlayer,
+                        spiedPlayerIndex = spiedAndRemaining.first,
+                        remainingCards = spiedAndRemaining.second,
+                    ),
+                )
+            }
+
+            duelResult.rounds.forEach { round ->
+                add(GameEvent.AfterDuelRound(turnCount = turn, upPlayerIndex = upPlayer, round = round))
+            }
+            add(GameEvent.Duel(turnCount = turn, upPlayerIndex = upPlayer, result = duelResult))
+
+            if (endTurn) {
+                add(GameEvent.EndTurn(turnCount = turn, upPlayerIndex = upPlayer))
+            }
+        }
+
+        fun add(event: GameEvent) {
+            events.add(event)
+        }
+
+        fun build() = events.toList()
+    }
+
+    companion object {
+        /**
+         * Builds a simple [DuelResult] where a two players dueled with normal cards and did not tie.
+         */
+        private fun buildSimpleDuelResult(loser: Pair<Int, Card>, winner: Pair<Int, Card>): DuelResult {
+            return DuelResult(
+                rounds = listOf(
+                    DuelRound(
+                        playedCards = mapOf(loser, winner),
+                        result = DuelRoundResult.LowestLost(losers = mapOf(loser), winners = mapOf(winner)),
+                    ),
                 ),
-            ),
-            discardedCards = mapOf(loser.first to listOf(loser.second)),
-            retainedCards = mapOf(winner.first to listOf(winner.second)),
-        )
+                discardedCards = mapOf(loser.first to listOf(loser.second)),
+                retainedCards = mapOf(winner.first to listOf(winner.second)),
+            )
+        }
     }
 }

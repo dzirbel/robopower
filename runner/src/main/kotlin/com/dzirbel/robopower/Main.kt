@@ -32,7 +32,7 @@ fun main() {
 
     repeat(TOTAL_GAMES) { round ->
         val gameResult = try {
-            GameImpl(playerFactories = players).run()
+            requireNotNull(GameImpl(playerFactories = players).run())
         } catch (ex: PlayerChoiceException) {
             val playerIndex = ex.player.playerIndex
             playerChoiceExceptionExamples.putIfAbsent(playerIndex, ex)
@@ -56,8 +56,6 @@ fun main() {
                 totalTies++
                 tieCounts.addAll(gameResult.tiedPlayers)
             }
-
-            null -> {}
         }
 
         if (round > 0 && round % INCREMENT == 0) {

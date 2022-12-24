@@ -5,8 +5,6 @@ import kotlin.random.Random
 
 /**
  * The actual game logic backing a [Game]; separate just to keep the public API of [Game] clean and obvious.
- *
- * TODO unit tests
  */
 class GameImpl(
     playerFactories: List<Player.Factory>,
@@ -85,7 +83,7 @@ class GameImpl(
      *
      * This function may onl be called once.
      */
-    fun run(): GameResult {
+    fun run(maxRounds: Int? = null): GameResult? {
         require(!started.getAndSet(true)) { "game is already running" }
 
         // deal starting hands; intentionally does not fire events since they are not actionable
@@ -99,7 +97,7 @@ class GameImpl(
 
         assertGameInvariants()
 
-        while (true) {
+        while (maxRounds == null || turnCount < maxRounds) {
             turnCount++
             emitEvent(GameEvent.StartTurn(game = this))
 
@@ -110,6 +108,8 @@ class GameImpl(
             emitEvent(GameEvent.EndTurn(game = this))
             upPlayerIndex = nextPlayerIndex
         }
+
+        return null
     }
 
     private fun draw() {
