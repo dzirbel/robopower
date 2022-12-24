@@ -1,8 +1,5 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 // TODO assertions
 // TODO jacoco and codecov
-// TODO github actions
 
 plugins {
     kotlin("jvm") version libs.versions.kotlin
@@ -16,10 +13,6 @@ allprojects {
 }
 
 subprojects {
-    tasks.withType<KotlinCompile> {
-        kotlinOptions.jvmTarget = "16"
-    }
-
     afterEvaluate {
         dependencies {
             detektPlugins(libs.detekt.formatting)
