@@ -25,7 +25,13 @@ class GameImpl(
      * [deck], etc.
      */
     override val players: List<Player> by lazy {
-        playerFactories.mapIndexed { index, factory -> factory.create(index, this) }
+        playerFactories.mapIndexed { index, factory ->
+            val player = factory.create(index, this)
+            if (player.playerIndex != index) {
+                throw PlayerThrownException(player, AssertionError("playerIndex has been tampered with"))
+            }
+            player
+        }
     }
 
     override val upPlayer: Player
@@ -91,7 +97,7 @@ class GameImpl(
             for (player in players) {
                 val (card, previousDiscard) = deck.draw()
                 assert(previousDiscard == null) // deck should not be reshuffled during the initial deal
-                player.draw(card)
+                player.deal(card)
             }
         }
 

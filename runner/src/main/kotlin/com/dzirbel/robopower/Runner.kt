@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.ExperimentalTime
 import kotlin.time.TimeSource
@@ -27,6 +28,7 @@ object Runner {
         val winCounts: MultiSet<Int>, // counts of wins for each player index
         val tieCounts: MultiSet<Int>, // counts of ties for each player index
         val totalTies: Int, // total number of ties
+        val playerLogicTime: MutableMap<Int, Duration>, // total time spent within player logic for each player index
         val playerChoiceExceptions: MultiSet<Int>, // number of times each player index threw a choice exception
         val playerChoiceExceptionExamples: MutableMap<Int, Throwable>, // single example of choice exceptions
         val playerThrownExceptions: MultiSet<Int>, // number of times each player index threw an exception
@@ -42,6 +44,7 @@ object Runner {
     suspend fun run(input: RunInput, printIncrementPercent: Int? = 5): Results {
         val winCounts = MultiSet<Int>()
         val tieCounts = MultiSet<Int>()
+        val playerLogicTime = mutableMapOf<Int, Duration>()
         var totalTies = 0
 
         val playerChoiceExceptions = MultiSet<Int>()
@@ -79,6 +82,13 @@ object Runner {
                 .collect { (factories, result) ->
                     result
                         .onSuccess { gameResult ->
+                            factories.forEachIndexed { gameIndex, (originalIndex, _) ->
+                                val player = gameResult.game.players[gameIndex]
+                                playerLogicTime.compute(originalIndex) { _, duration ->
+                                    (duration ?: Duration.ZERO) + player.totalPlayerLogicTime
+                                }
+                            }
+
                             when (gameResult) {
                                 is GameResult.Winner -> winCounts.add(factories[gameResult.winner].index)
                                 is GameResult.Tied -> {
@@ -131,6 +141,7 @@ object Runner {
             winCounts = winCounts,
             tieCounts = tieCounts,
             totalTies = totalTies,
+            playerLogicTime = playerLogicTime,
             playerChoiceExceptions = playerChoiceExceptions,
             playerChoiceExceptionExamples = playerChoiceExceptionExamples,
             playerThrownExceptions = playerThrownExceptions,
@@ -166,6 +177,9 @@ object Runner {
                 "  Player ${playerIndex + 1} ($playerName) : $wins wins (${formatPercent(wins, successfulGames)}); " +
                     "$ties ties (${formatPercent(ties, successfulGames)})",
             )
+
+            val timePerGame = results.playerLogicTime.getValue(playerIndex) / results.successfulGames
+            println("  > Time spent per game: $timePerGame")
 
             println("  > Invalid choices:   ${results.playerChoiceExceptions.count(playerIndex)}")
             results.playerChoiceExceptionExamples[playerIndex]?.let { example ->
