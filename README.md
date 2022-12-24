@@ -1,7 +1,7 @@
 ## Robo Power
 
 [![Build status](https://github.com/dzirbel/robopower/workflows/Build/badge.svg)](https://github.com/dzirbel/robopower/actions/workflows/build.yml)
-[![codecov](https://codecov.io/gh/dzirbel/robopower/branch/master/graph/badge.svg)](https://codecov.io/gh/dzirbel/robopower)
+[![codecov](https://codecov.io/gh/dzirbel/robopower/branch/main/graph/badge.svg?token=XQCWQ5OFKG)](https://codecov.io/gh/dzirbel/robopower)
 
 Robo Power© is a simple card game invented by my brother [Alex Zirbel](https://github.com/azirbel)
 at the precocious age of 8. This project is an implementation of the game mechanics (in
