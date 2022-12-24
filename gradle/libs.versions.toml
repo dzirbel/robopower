@@ -1,7 +1,6 @@
 [versions]
 coroutines = "1.6.4"
 detekt = "1.22.0" # https://github.com/detekt/detekt
-jacoco = "0.8.8" # https://github.com/jacoco/jacoco
 junit = "5.8.1"
 kotlin = "1.7.21"
 

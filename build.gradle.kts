@@ -68,9 +68,5 @@ subprojects {
         tasks.test {
             useJUnitPlatform()
         }
-
-        jacoco {
-            toolVersion = libs.versions.jacoco.get()
-        }
     }
 }

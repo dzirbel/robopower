@@ -7,7 +7,9 @@ import com.dzirbel.robopower.util.maxByNullableOrNull
 import com.dzirbel.robopower.util.maxKeyByOrNull
 import kotlin.random.Random
 
-// TODO move out of runner?
+/**
+ * Simple [Player] with very basic, hard-coded strategies. Beats [RandomPlayer] about 4:1.
+ */
 class SimplePlayer(
     playerIndex: Int,
     game: Game,

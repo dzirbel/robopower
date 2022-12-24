@@ -2,7 +2,9 @@ package com.dzirbel.robopower
 
 import kotlin.random.Random
 
-// TODO move out of runner?
+/**
+ * Trivial [Player] which uses [random] to make all of its choices uniformly randomly.
+ */
 class RandomPlayer(
     playerIndex: Int,
     game: Game,
