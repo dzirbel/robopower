@@ -12,8 +12,6 @@ import kotlin.time.TimeSource
  * player to steal from when discarding spies), and [duel] (to choose a card to play in a duel or double-duel). To
  * inform their strategy [Player]s may also listen for public [GameEvent]s via [Game.onEvent] (and [Game.onEventOfType])
  * or by accessing the [Game.eventLog] and may override callbacks [onDraw], [onCardStolen], etc. for private events.
- *
- * TODO add unit tests
  */
 abstract class Player(val playerIndex: Int, protected val game: Game) {
     /**
