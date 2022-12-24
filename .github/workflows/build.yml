@@ -11,4 +11,4 @@ jobs:
           distribution: 'adopt'
           java-version: '16'
 
-      - run: ./gradlew --stacktrace check
+      - run: ./gradlew --stacktrace check jacocoTestReport
