@@ -4,7 +4,7 @@
 
 Robo Power© is a simple card game invented by my brother [Alex Zirbel](https://github.com/azirbel)
 at the precocious age of 8. This project is an implementation of the game mechanics (in
-[/lib](/lib)) and various AI players (in various `/player-*` modules).
+[/lib](/lib)) and AI players (in various `/player-*` modules).
 
 For game rules, see the [rule book](/rulebook.pdf).
 
@@ -25,8 +25,13 @@ cards, and players to spy. To help with the logic there are a number of hooks bu
 - built-in tracking of known cards held by other players via `CardTracker`, which can be 
   conveniently used by extending `PlayerWithCardTracker`
 
-### Gradle reference
+### Setup and Gradle reference
 
-The project is built and run with [Gradle](https://gradle.org/). Some common commands:
+The recommended programming environment is [IntelliJ IDEA](https://www.jetbrains.com/idea/)
+(Community Edition is fine). The project is built and run with [Gradle](https://gradle.org/), which
+integrates well with IntelliJ (after allowing it to sync after opening the project). The project can
+also be run from the command line with these commands (among others, see `./gradlew tasks`):
 - `./gradlew :runner:run` runs the main program in [Main.kt](/runner/src/main/kotlin/com/dzirbel/robopower/Main.kt)
 - `./gradlew check` compiles and lints code and runs tests in all modules
+
+These are also available as IntelliJ run configurations checked into git alongside the project.
