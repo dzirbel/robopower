@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.DEFAULT_CONCURRENCY
 import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
+import kotlin.time.DurationUnit
 import kotlin.time.ExperimentalTime
 import kotlin.time.TimeSource
 import kotlin.time.times
@@ -120,7 +122,8 @@ object Runner {
         }
 
         val elapsed = start.elapsedNow()
-        println("Done in $elapsed (avg ${elapsed / input.games} per game)")
+        val gamesPerSecond = (input.games / elapsed.toDouble(DurationUnit.SECONDS)).roundToInt()
+        println("Done in $elapsed (avg ${elapsed / input.games} per game; $gamesPerSecond games/s)")
         println()
 
         return Results(
