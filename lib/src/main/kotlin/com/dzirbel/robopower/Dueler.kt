@@ -21,13 +21,6 @@ object Dueler {
      */
     interface PlayerCardSupplier {
         /**
-         * Whether this player is active in the *first* round of the duel; this is necessary (as opposed to just
-         * excluding those players from calls to [duel]) in order to have the player indexes be accurate to the master
-         * list.
-         */
-        val isActive: Boolean
-
-        /**
          * Fetches the next [Card] to be played in a round of a duel where [involvedPlayers] are still playing and
          * [previousRounds] have already been played.
          *
@@ -50,9 +43,6 @@ object Dueler {
             private val deck: Deck,
             private val onDeckReshuffled: (previousDiscard: List<Card>) -> Unit = {},
         ) : PlayerCardSupplier {
-            override val isActive: Boolean
-                get() = player.isActive
-
             override fun CoroutineScope.nextCard(
                 involvedPlayers: Set<Int>,
                 previousRounds: List<DuelRound>,
@@ -74,8 +64,6 @@ object Dueler {
         class FromCardList(cards: List<Card>) : PlayerCardSupplier {
             private val remainingCards = cards.toMutableList()
 
-            override val isActive = cards.isNotEmpty()
-
             override fun CoroutineScope.nextCard(
                 involvedPlayers: Set<Int>,
                 previousRounds: List<DuelRound>,
@@ -89,11 +77,15 @@ object Dueler {
      * Runs a duel among the given [players] and returns a [DuelResult] with a complete record of the cards played in
      * each round and the resulting actions (cards trapped, discarded, etc).
      *
-     * @param players the [PlayerCardSupplier]s providing each round of cards in the duel
+     * @param players the [PlayerCardSupplier]s providing each round of cards in the duel, provided as [IndexedValue]s
+     *  to reference the official player indexes
      * @param onRound callback invoked after each [DuelRound] is played
      */
     @Suppress("ReturnCount")
-    fun duel(players: List<PlayerCardSupplier>, onRound: (DuelRound) -> Unit = {}): DuelResult {
+    fun duel(
+        players: Iterable<IndexedValue<PlayerCardSupplier>>,
+        onRound: (DuelRound) -> Unit = {},
+    ): DuelResult {
         val rounds = mutableListOf<DuelRound>()
 
         // map from player index to the cards they have removed from their hand and are currently in-play
@@ -107,9 +99,7 @@ object Dueler {
         val drawnCards: MutableMap<Int, List<Card>> = mutableMapOf()
 
         // set of player indexes that are still involved in the duel
-        var involvedPlayers: Set<Int> = players.withIndex().mapNotNullTo(mutableSetOf()) { (index, player) ->
-            if (player.isActive) index else null
-        }
+        var involvedPlayers: Set<Int> = players.mapTo(mutableSetOf()) { it.index }
 
         // whether any traps have been played in previous rounds; if so then even if the duel is resolved without traps
         // the cards in play will ultimately be trapped
@@ -123,8 +113,8 @@ object Dueler {
             // add newly played cards to the pool and map of drawn cards
             for ((cardPlayerIndex, cardResult) in playedCards) {
                 cardsInPlay.compute(cardPlayerIndex) { _, cards -> cards.orEmpty().plus(cardResult.first) }
-                drawnCards.compute(cardPlayerIndex) { _, cards ->
-                    if (cardResult.second) cards.orEmpty().plus(cardResult.first) else cards
+                if (cardResult.second) {
+                    drawnCards.compute(cardPlayerIndex) { _, cards -> cards.orEmpty().plus(cardResult.first) }
                 }
             }
 
@@ -143,7 +133,6 @@ object Dueler {
                         // previous round was a trap, so this was resolving the trap and now all cards in play go to the
                         // winner (so we need to look for the highest card rather than lowest)
                         val winners = playedCards.keys.minus(roundResult.losers.keys)
-                        assert(winners.size == 1) // only one winner or else it shouldn't have been a LowestLost result
 
                         val winner = winners.first()
                         val winnerCards = cardsInPlay.getValue(winner)
@@ -161,7 +150,6 @@ object Dueler {
                             drawnCards = drawnCards,
                         )
                     } else {
-                        assert(roundResult.losers.size == 1)
                         val loser = roundResult.losers.keys.first()
 
                         return DuelResult(
@@ -249,7 +237,6 @@ object Dueler {
                     if (trapping) {
                         // if already trapping, instead find the highest card(s) to win the trap
                         val winners: Set<Int> = playedCards.maxKeysBy(Card.comparatorByScore)
-                        assert(winners.isNotEmpty())
 
                         if (winners.size == 1) {
                             val winner = winners.first()
@@ -265,7 +252,6 @@ object Dueler {
                         }
                     } else {
                         val losers: Set<Int> = playedCards.maxKeysBy(Card.comparatorByScore.reversed())
-                        assert(losers.isNotEmpty())
 
                         if (losers.size == 1) {
                             val loser = losers.first()
@@ -300,13 +286,12 @@ object Dueler {
      *  [PlayerCardSupplier.nextCard])
      */
     private fun getPlayedCardsForDuel(
-        players: List<PlayerCardSupplier>,
+        players: Iterable<IndexedValue<PlayerCardSupplier>>,
         involvedPlayers: Set<Int>,
         previousRounds: List<DuelRound>,
     ): Map<Int, Pair<Card, Boolean>> {
         return runBlocking {
             players
-                .withIndex()
                 .filter { it.index in involvedPlayers }
                 .associate { (playerIndex, player) ->
                     with(player) {

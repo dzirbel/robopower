@@ -243,7 +243,7 @@ class DuelerTest {
     }
 
     private fun assertDuel(vararg cards: List<Card>, expectedResult: (players: List<List<Card>>) -> DuelResult) {
-        val result = Dueler.duel(cards.map { Dueler.PlayerCardSupplier.FromCardList(it) })
+        val result = Dueler.duel(cards.map { Dueler.PlayerCardSupplier.FromCardList(it) }.withIndex())
         assertEquals(result, expectedResult(cards.toList()))
 
         val totalInputCards = cards.sumOf { it.size }

@@ -62,13 +62,6 @@ class Deck(
     }
 
     /**
-     * Adds all the [Card]s in [cards] to the top (end) of the discard pile.
-     */
-    internal fun discardAll(cards: Collection<Card>) {
-        _discardPile.addAll(cards)
-    }
-
-    /**
      * Reshuffles the current [discardPile] into the [drawPile], returning the cards previously in [discardPile].
      */
     private fun shuffleDiscardIntoDraw(): List<Card> {

@@ -36,13 +36,13 @@ data class DuelResult(
     val drawnCards: Map<Int, List<Card>> = emptyMap(),
 ) {
     init {
-        assert(rounds.isNotEmpty())
-        assert(rounds.last().result !is DuelRoundResult.DoubleDuel)
-        assert(rounds.dropLast(1).all { it.result is DuelRoundResult.DoubleDuel })
-        assert(discardedCards.values.all { it.isNotEmpty() })
-        assert(retainedCards.values.all { it.isNotEmpty() })
-        assert(trappedCards.values.all { cardsByPlayer -> cardsByPlayer.isNotEmpty() })
-        assert(trappedCards.values.all { cardsByPlayer -> cardsByPlayer.values.all { it.isNotEmpty() } })
+        assertLazy { rounds.isNotEmpty() }
+        assertLazy { rounds.last().result !is DuelRoundResult.DoubleDuel }
+        assertLazy { rounds.dropLast(1).all { it.result is DuelRoundResult.DoubleDuel } }
+        assertLazy { discardedCards.values.all { it.isNotEmpty() } }
+        assertLazy { retainedCards.values.all { it.isNotEmpty() } }
+        assertLazy { trappedCards.values.all { cardsByPlayer -> cardsByPlayer.isNotEmpty() } }
+        assertLazy { trappedCards.values.all { cardsByPlayer -> cardsByPlayer.values.all { it.isNotEmpty() } } }
     }
 }
 
@@ -141,8 +141,8 @@ sealed interface DuelRoundResult {
         val doubleDuelers: Map<Int, Card>,
     ) : DuelRoundResult {
         init {
-            assert(doubleDuelers.size >= 2)
-            assert(doubleDuelers.all { it.value.isTrap == trapping })
+            assertLazy { doubleDuelers.size >= 2 }
+            assertLazy { doubleDuelers.all { it.value.isTrap == trapping } }
         }
     }
 }

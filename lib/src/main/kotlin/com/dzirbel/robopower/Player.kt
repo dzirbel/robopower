@@ -45,19 +45,14 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
         catchingPlayerExceptions { onReceiveSpyCard(card = card, fromPlayerIndex = fromPlayerIndex) }
     }
 
-    // returns card + true if the player was eliminated
-    internal fun stealRandomCard(byPlayerIndex: Int, random: Random = Random.Default): Pair<Card, Boolean> {
-        check(_hand.isNotEmpty())
+    // returns card + number of cards remaining in the hand
+    internal fun stealRandomCard(byPlayerIndex: Int, random: Random = Random.Default): Pair<Card, Int> {
         val stolenCard = _hand.removeAt(index = random.nextInt(until = _hand.size))
         catchingPlayerExceptions { onCardStolen(stolenCard, byPlayerIndex) }
-        return Pair(stolenCard, _hand.isEmpty())
+        return Pair(stolenCard, _hand.size)
     }
 
     internal fun doDiscard(): Card {
-        // single-card hand is not possible since a card was just drawn (so there's no need to optimize to avoid calls
-        // discard() for single-card hands)
-        assert(_hand.size > 1)
-
         val cardIndex = catchingPlayerExceptions { discard() }
 
         if (cardIndex !in _hand.indices) {

@@ -73,7 +73,8 @@ sealed interface GameEvent {
     }
 
     /**
-     * Emitted when a player discards a card for their turn (i.e. not from losing cards in a duel).
+     * Emitted when a player discards a card for their turn (i.e. not from losing cards in a duel); prior stealing cards
+     * from spies.
      */
     data class PlayerDiscard(
         override val turnCount: Int,
