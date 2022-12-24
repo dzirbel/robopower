@@ -1,4 +1,3 @@
-// TODO assertions
 // TODO jacoco and codecov
 
 plugins {
@@ -12,7 +11,15 @@ allprojects {
     }
 }
 
+val runtimeAssertions = findProperty("runtime.assertions")?.toString()?.toBoolean() == true
+
 subprojects {
+    if (runtimeAssertions) {
+        tasks.withType<JavaExec>().configureEach {
+            enableAssertions = true
+        }
+    }
+
     afterEvaluate {
         dependencies {
             detektPlugins(libs.detekt.formatting)
