@@ -104,6 +104,7 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
     }
 
     internal fun postDuel(retainedCards: List<Card>?, trappedCards: List<Card>?) {
+        // TODO place retained cards back in the hand in the same position they were originally (not trivial)
         cardsInPlay = 0
         retainedCards?.let { _hand.addAll(it) }
         trappedCards?.let { _hand.addAll(it) }

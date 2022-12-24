@@ -11,9 +11,8 @@ import kotlin.random.Random
 class GameImpl(
     playerFactories: List<Player.Factory>,
     private val random: Random = Random.Default,
+    override val deck: Deck = Deck(random = random),
 ) : Game {
-    override val deck = Deck(random = random)
-
     override var turnCount = 0
         private set
 
@@ -230,8 +229,8 @@ class GameImpl(
             // case this happens before discards this turn); until it has been reshuffled
             assert(reshuffled || deck.discardPileSize >= 2 * (turnCount - 1))
 
-            // player whose is up is still in the game
-            assert(upPlayer.isActive)
+            // player whose is up is still in the game (if there are any active players)
+            assert(activePlayerCount == 0 || upPlayer.isActive)
 
             // number of StartTurn events is equal to the turnCount
             assert(_eventLog.count { it is GameEvent.StartTurn } == turnCount)

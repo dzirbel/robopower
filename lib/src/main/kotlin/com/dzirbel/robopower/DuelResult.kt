@@ -59,7 +59,7 @@ data class DuelRound(
      * Map from player index to the [Card] which was drawn from the deck to be played, for players who drew their card
      * from the deck this round (values are also present in [playedCards]).
      */
-    val drawnCards: Map<Int, Card>,
+    val drawnCards: Map<Int, Card> = emptyMap(),
 
     /**
      * The outcome of the round.
