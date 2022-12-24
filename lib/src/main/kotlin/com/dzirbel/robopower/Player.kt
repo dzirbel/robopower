@@ -5,7 +5,11 @@ import kotlin.random.Random
 // TODO document
 // TODO unit tests?
 abstract class Player(val playerIndex: Int, protected val game: Game) {
-    fun interface Factory {
+    interface Factory {
+        fun playerName(playerIndex: Int): String {
+            return this::class.qualifiedName.orEmpty().removeSuffix(".Companion").substringAfterLast('.')
+        }
+
         fun create(playerIndex: Int, game: Game): Player
     }
 

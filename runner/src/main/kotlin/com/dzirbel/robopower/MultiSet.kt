@@ -7,6 +7,12 @@ class MultiSet<E> {
     private val map = mutableMapOf<E, Int>()
 
     /**
+     * The sum of counts for all elements.
+     */
+    val total
+        get() = map.values.sum()
+
+    /**
      * Adds a count for [element].
      */
     fun add(element: E) {
