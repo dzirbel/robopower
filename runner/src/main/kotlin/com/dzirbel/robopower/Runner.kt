@@ -49,7 +49,7 @@ object Runner {
         var engineExceptions = 0
         var engineExceptionExample: Throwable? = null
 
-        val increment = printIncrementPercent?.let { (input.games * it) / 100 }
+        val increment = printIncrementPercent?.let { it * input.games / 100 }
         var gamesFinished = 0
 
         println("Running ${input.games} ${input.players.size}-player games with parallelism of ${input.concurrency}")
@@ -92,11 +92,13 @@ object Runner {
                                     playerChoiceExceptionExamples.putIfAbsent(playerIndex, throwable)
                                     playerChoiceExceptions.add(playerIndex)
                                 }
+
                                 is PlayerThrownException -> {
                                     val playerIndex = throwable.player.playerIndex
                                     playerThrownExceptionExamples.putIfAbsent(playerIndex, throwable)
                                     playerThrownExceptions.add(playerIndex)
                                 }
+
                                 else -> {
                                     if (engineExceptionExample == null) {
                                         engineExceptionExample = throwable
@@ -141,7 +143,7 @@ object Runner {
 
         println(
             "$successfulGames / ${results.input.games} games completed successfully " +
-                    "(${formatPercent(successfulGames, results.input.games)})"
+                "(${formatPercent(successfulGames, results.input.games)})",
         )
         println("${results.engineExceptions} engine exceptions")
         results.engineExceptionExample?.let { example ->
@@ -159,7 +161,7 @@ object Runner {
             val playerName = player.playerName(playerIndex)
             println(
                 "  Player ${playerIndex + 1} ($playerName) : $wins wins (${formatPercent(wins, successfulGames)}); " +
-                        "$ties ties (${formatPercent(ties, successfulGames)})",
+                    "$ties ties (${formatPercent(ties, successfulGames)})",
             )
 
             println("  > Invalid choices:   ${results.playerChoiceExceptions.count(playerIndex)}")
