@@ -71,4 +71,38 @@ class PlayerTest {
         assertEquals(exceptionThrowingPlayer, stolenCardReceivedException.player)
         assertEquals("6", stolenCardReceivedException.cause?.message)
     }
+
+    @Test
+    fun `dueling cards are re-added to the hand at the end`() {
+        val dueledCards = mutableListOf(1, 4, 2)
+        val player = object : Player(playerIndex = 0, game = game) {
+            override fun discard() = 0
+            override fun spy() = 0
+            override fun duel(involvedPlayers: Set<Int>, previousRounds: List<DuelRound>) = dueledCards.removeFirst()
+
+            fun assertHand(vararg cards: Card) {
+                assertEquals(cards.toList(), hand)
+            }
+        }
+
+        player.deal(Card.BUZZY)
+        player.deal(Card.BUZZY)
+        player.deal(Card.SHOCK)
+        player.deal(Card.TRAP)
+        player.deal(Card.LIGHTOR)
+        player.deal(Card.ZIP)
+        player.deal(Card.HAIRY)
+
+        val card1 = player.doDuel(involvedPlayers = setOf(0, 1), previousRounds = emptyList())
+        val card2 = player.doDuel(involvedPlayers = setOf(0, 1), previousRounds = emptyList())
+        val card3 = player.doDuel(involvedPlayers = setOf(0, 1), previousRounds = emptyList())
+
+        assertEquals(Card.BUZZY, card1)
+        assertEquals(Card.ZIP, card2)
+        assertEquals(Card.TRAP, card3)
+
+        player.postDuel(retainedCards = listOf(card1, card2), trappedCards = listOf(Card.ROBO_STRIKER))
+
+        player.assertHand(Card.BUZZY, Card.SHOCK, Card.LIGHTOR, Card.HAIRY, card1, card2, Card.ROBO_STRIKER)
+    }
 }

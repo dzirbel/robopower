@@ -55,8 +55,9 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
     /**
      * The current [Card]s in this [Player]'s hand.
      *
-     * Cards are always added to the end of the list (including when returning them to the hand from a duel).
-     * TODO place retained cards back in the hand in the same position they were originally (not trivial)
+     * Cards are always added to the end of the list (including when returning them to the hand from a duel). It might
+     * be better to insert them at the index they were taken, but this can be very difficult to do (since only some of
+     * the played cards might be retained, with traps discarded) and the benefit is minimal.
      */
     protected val hand: List<Card>
         get() = _hand.toList()
