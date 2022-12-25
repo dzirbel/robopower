@@ -21,6 +21,7 @@ object Runner {
         val players: List<Player.Factory>,
         val randomizeOrder: Boolean = true,
         val concurrency: Int = DEFAULT_CONCURRENCY,
+        val verbose: Boolean = false,
     )
 
     data class Results(
@@ -181,19 +182,25 @@ object Runner {
             val timePerGame = results.playerLogicTime.getValue(playerIndex) / results.successfulGames
             println("  > Time spent per game: $timePerGame")
 
-            println("  > Invalid choices:   ${results.playerChoiceExceptions.count(playerIndex)}")
-            results.playerChoiceExceptionExamples[playerIndex]?.let { example ->
-                println()
-                println("    Example:")
-                println(example.stackTraceToString())
-                println()
+            val invalidChoices = results.playerChoiceExceptions.count(playerIndex)
+            if (results.input.verbose || invalidChoices > 0) {
+                println("  > Invalid choices:   $invalidChoices")
+                results.playerChoiceExceptionExamples[playerIndex]?.let { example ->
+                    println()
+                    println("    Example:")
+                    println(example.stackTraceToString())
+                    println()
+                }
             }
 
-            println("  > Exceptions thrown: ${results.playerThrownExceptions.count(playerIndex)}")
-            results.playerThrownExceptionExamples[playerIndex]?.let { example ->
-                println()
-                println("    Example:")
-                println(example.stackTraceToString())
+            val exceptionsThrown = results.playerThrownExceptions.count(playerIndex)
+            if (results.input.verbose || exceptionsThrown > 0) {
+                println("  > Exceptions thrown: $exceptionsThrown")
+                results.playerThrownExceptionExamples[playerIndex]?.let { example ->
+                    println()
+                    println("    Example:")
+                    println(example.stackTraceToString())
+                }
             }
 
             println()
