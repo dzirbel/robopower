@@ -1,5 +1,7 @@
 package com.dzirbel.robopower
 
+import com.dzirbel.robopower.util.MultiSet
+
 /**
  * Provides bookkeeping for known cards in the game from public [GameEvent]s.
  *
@@ -26,11 +28,14 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
         .associateWith { mutableListOf<Card>() }
         .toMutableMap()
 
+    private var unknownCards: MultiSet<Card>? = null
+
     init {
         // on discard, remove one copy of the discarded card from the known cards
         game.onEventOfType<GameEvent.PlayerDiscard> { event ->
             if (event.upPlayerIndex != trackingPlayerIndex) {
                 _knownCards.getValue(event.upPlayerIndex).remove(event.discardedCard)
+                unknownCards = null
             }
         }
 
@@ -41,6 +46,7 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
             for ((player, discarded) in result.discardedCards) {
                 if (player != trackingPlayerIndex) {
                     _knownCards.getValue(player).removeEach(discarded)
+                    unknownCards = null
                 }
             }
 
@@ -65,6 +71,7 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
                         repeat(newlySeenCount) {
                             playerCards.add(card)
                         }
+                        unknownCards = null
                     }
                 }
             }
@@ -79,6 +86,7 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
                     }
 
                     trapperCards?.addAll(trappedCards)
+                    unknownCards = null
                 }
             }
         }
@@ -99,6 +107,8 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
 
                 // we now know nothing about the player who lost a card since it could have been any card stolen
                 _knownCards.getValue(event.spiedPlayerIndex).clear()
+
+                unknownCards = null
             }
         }
 
@@ -108,8 +118,10 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
             val active = game.activePlayers.filter { it.index != trackingPlayerIndex }
             if (active.size == 1) {
                 val activePlayer = active.first().index
-                val unknownCards = event.previousDiscard.toMutableList().apply { addAll(getHand()) }
-                _knownCards[activePlayer] = unknownCards
+                _knownCards[activePlayer] = Card.deck.toMutableList().apply {
+                    removeEach(event.previousDiscard)
+                    removeEach(getHand())
+                }
             }
         }
     }
@@ -133,18 +145,42 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
     /**
      * Returns a list of the [Card]s which are not accounted for - either in the hands of other players or the draw
      * pile.
+     *
+     * This value is memoized between calls until there is any change in the set of known cards.
+     *
+     * TODO could be optimized to just update [unknownCards] on each change rather than recomputing, at least sometimes
      */
-    fun unknownCards(): List<Card> {
-        val remainingCards = Card.deck.toMutableList()
+    fun unknownCards(): MultiSet<Card> {
+        unknownCards?.let { return it }
 
-        remainingCards.removeEach(getHand())
-        remainingCards.removeEach(game.deck.discardPile)
-        for ((_, cards) in _knownCards) {
-            remainingCards.removeEach(cards)
+        val cards = MultiSet(elements = Card.values().associateWith { it.multiplicity })
+        cards.removeAll(getHand())
+        cards.removeAll(game.deck.discardPile)
+        for ((_, knownCards) in _knownCards) {
+            cards.removeAll(knownCards)
         }
-
-        return remainingCards
+        return cards.also { unknownCards = it }
     }
+
+    /**
+     * Returns the number of [card]s which are unaccounted for.
+     */
+    fun countUnknown(card: Card): Int = unknownCards().count(card)
+
+    /**
+     * Returns the number of [card]s which have been seen.
+     */
+    fun countKnown(card: Card): Int = card.multiplicity - countUnknown(card)
+
+    /**
+     * Returns the number of cards satisfying [predicate] which are unaccounted for.
+     */
+    fun countUnknownWhere(predicate: (Card) -> Boolean): Int = unknownCards().count(predicate)
+
+    /**
+     * Returns the number of cards satisfying [predicate] which have been seen.
+     */
+    fun countKnownWhere(predicate: (Card) -> Boolean): Int = Card.deck.size - countUnknownWhere(predicate)
 
     /**
      * Removes all one copy of each of [elements] from this collection, as opposed to [removeAll] which removes all

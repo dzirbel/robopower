@@ -57,6 +57,76 @@ enum class Card(val cardName: String, val score: Int?, val spyCount: Int = 0, va
     val isNormalOrSpy
         get() = score != null
 
+    /**
+     * The relative rank of this [Card] based on its [score], with [TRAP] as higher than any normal card and
+     * [COUNTERACT] above [TRAP].
+     */
+    val rank by lazy {
+        when (this) {
+            COUNTERACT -> requireNotNull(Card.values().maxBy { it.score ?: 0 }.scoreRank) + 2
+            TRAP -> requireNotNull(Card.values().maxBy { it.score ?: 0 }.scoreRank) + 1
+            else -> requireNotNull(scoreRank)
+        }
+    }
+
+    /**
+     * The relative rank of this [Card] based on its [score], or null if its [score] is null.
+     *
+     * This is a normalized [score] where the lowest card ([BUZZY]) is rank 0 and the highest card ([ROBO_STRIKER]) has
+     * the highest rank. [TRAP] and [COUNTERACT] have null [scoreRank].
+     */
+    val scoreRank: Int? by lazy {
+        if (score != null) Card.values().count { it.score != null && score > it.score } else null
+    }
+
+    /**
+     * The number of normal cards (including their [multiplicity]) that have a strictly higher [score] than this [Card];
+     * null for [TRAP] and [COUNTERACT].
+     */
+    val countStronger: Int? by lazy {
+        if (score != null) {
+            Card.values().sumOf { if (it.score != null && it.score > score) it.multiplicity else 0 }
+        } else {
+            null
+        }
+    }
+
+    /**
+     * The number of normal cards (including their [multiplicity]) that have an equal or higher [score] than this [Card]
+     * (including this [Card] and its copies), null for [TRAP] and [COUNTERACT].
+     */
+    val countStrongerOrEqual: Int? by lazy {
+        if (score != null) {
+            Card.values().sumOf { if (it.score != null && it.score >= score) it.multiplicity else 0 }
+        } else {
+            null
+        }
+    }
+
+    /**
+     * The number of normal cards (including their [multiplicity]) that have a strictly lower [score] than this [Card];
+     * null for [TRAP] and [COUNTERACT].
+     */
+    val countWeaker: Int? by lazy {
+        if (score != null) {
+            Card.values().sumOf { if (it.score != null && it.score < score) it.multiplicity else 0 }
+        } else {
+            null
+        }
+    }
+
+    /**
+     * The number of normal cards (including their [multiplicity]) that have an equal or lower [score] than this [Card];
+     * null for [TRAP] and [COUNTERACT].
+     */
+    val countWeakerOrEqual: Int? by lazy {
+        if (score != null) {
+            Card.values().sumOf { if (it.score != null && it.score <= score) it.multiplicity else 0 }
+        } else {
+            null
+        }
+    }
+
     override fun toString(): String {
         return if (isTrap || isCounteract) cardName else "$cardName [$score]"
     }
