@@ -13,7 +13,7 @@ import kotlin.random.Random
 /**
  * Simple [Player] with very basic, hard-coded strategies. Beats [RandomPlayer] about 4:1.
  */
-class SecondBestCardSimplePlayer(
+open class SimplePlayer(
     playerIndex: Int,
     game: Game,
     private val random: Random = Random.Default,
@@ -38,6 +38,6 @@ class SecondBestCardSimplePlayer(
     }
 
     companion object : Factory {
-        override fun create(playerIndex: Int, game: Game) = SecondBestCardSimplePlayer(playerIndex, game)
+        override fun create(playerIndex: Int, game: Game) = SimplePlayer(playerIndex, game)
     }
 }

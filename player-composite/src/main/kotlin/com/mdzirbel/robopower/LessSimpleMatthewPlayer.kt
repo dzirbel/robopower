@@ -2,37 +2,16 @@ package com.mdzirbel.robopower
 
 import com.dzirbel.robopower.*
 import com.dzirbel.robopower.util.indexOfFirstOrNull
-import com.dzirbel.robopower.util.indexOfMaxOrNull
-import com.dzirbel.robopower.util.indexOfMinOrNull
 import com.dzirbel.robopower.util.maxByNullableOrNull
-import com.dzirbel.robopower.util.maxKeyByOrNull
 import kotlin.random.Random
 
-// config
-val spyDesireThreshold = 10
-val trapThreshold = 19
-
-class PlayerKnowledge(
-) {
-    val highCard = 0
-    val lowCard = 0
-
-    val handQuality = 0
-
-    // How much we want to steal from them
-    fun spyDesire() {
-
-    }
-}
-
-/**
- * The best player with the best strategies. Beats Dominic's strategies by a lot
- */
-class MatthewPlayer(
+@Suppress("UnsafeCallOnNullableType", "ReturnCount", "UnnecessaryLet")
+class LessSimpleMatthewPlayer(
     playerIndex: Int,
     game: Game,
-    private val random: Random = Random.Default,
-) : PlayerWithCardTracker(playerIndex, game) {
+    random: Random = Random.Default,
+) : SimplePlayer(playerIndex, game, random) {
+
 
     private var lastDuel: GameEvent.Duel? = null
 
@@ -43,21 +22,54 @@ class MatthewPlayer(
         }
     }
 
-    override fun discard(): Int {
-        return hand.indexOfMinOrNull { it.score } // discard the smallest score (ignoring traps and counteracts)
-            ?: hand.indexOfFirstOrNull { it.isCounteract } // discard any counteracts
-            ?: 0 // there are only traps so discard the first one
-    }
-
-    // todo account for double duel things
-    override fun duel(involvedPlayers: Set<Int>, previousRounds: List<DuelRound>): Int {
-
-        // if we have 2 cards, play a counteract if we have one
-        if (hand.size == 2) {
-            hand.indexOfFirstOrNull { it.isCounteract }?.let { return it }
+    // TODO add to DuelResult
+    private val DuelResult.allCards: Map<Int, List<Card>>
+        get() = rounds.fold(mutableMapOf()) { acc, round ->
+            for ((playerIndex, card) in round.playedCards) {
+                acc.compute(playerIndex) { _, cards -> cards.orEmpty().plus(card) }
+            }
+            acc
         }
 
-        // Check what our desire to play a trap is
+    override fun discard(): Int {
+        val spyIndex = hand.indexOfFirstOrNull { it.spyCount > 0 }
+        if (spyIndex != null) {
+            val spies = hand.count { it.spyCount > 0 }
+            if (hand.size - spies == 1) return spyIndex
+
+            cardTracker.knownCards.mapValues { (playerIndex, knownCards) ->
+                val handSize = game.players[playerIndex].handSize()
+                if (knownCards.size == handSize) knownCards.minByOrNull { it.rank } else null
+            }
+                .filterValues { it != null }
+                .maxByOrNull { it.value!!.rank }
+                ?.takeIf { it.value!!.rank >= Card.RAM.rank }
+                ?.let { return spyIndex }
+        }
+
+        return super.discard()
+    }
+
+    override fun duel(involvedPlayers: Set<Int>, previousRounds: List<DuelRound>): Int {
+        // play traps in double duels
+        if (previousRounds.isNotEmpty()) {
+            hand.indexOfFirstOrNull { it.isTrap }?.let { return it }
+        }
+
+        val highestScoreKnown = cardTracker.knownCards
+            .flatMap { it.value }
+            .maxByNullableOrNull { it.score }
+            ?.score
+            ?: Card.ALX.score!!
+
+        val lastDuel = game.eventLog.lastOrNull { it is GameEvent.Duel } as? GameEvent.Duel
+        val highestRankLastDuel: Int? = lastDuel?.result?.allCards?.entries
+            ?.maxByNullableOrNull { it.value.maxByOrNull { card -> card.rank } }
+            ?.value
+            ?.maxByOrNull { card -> card.rank }
+            ?.rank
+
+        // Added code to play traps specifically
         val trapDesire = trapDesire()
         if (trapDesire >= trapThreshold) {
             // Play a trap if we have one
@@ -66,31 +78,24 @@ class MatthewPlayer(
             hand.indexOfFirstOrNull { it.isCounteract }?.let { return it }
         }
 
-        // Play a normal card if we have one
-        return hand.indexOfMaxOrNull { if (it.isNormal) it.score else null } // play the highest normal card
-            ?: hand.indexOfFirstOrNull { it.isCounteract } // play any counteracts
-            ?: hand.indexOfFirstOrNull { it.isTrap } // play any traps
-            ?: 0 // only spies, play the first one
+        if (highestScoreKnown > Card.UN_BEAT.score!! &&
+            highestRankLastDuel != null &&
+            highestRankLastDuel >= Card.BRAINY.rank
+        ) {
+            hand.indexOfFirstOrNull { it.isTrap }?.let { return it }
+        }
 
-        // If we only have traps, counteracts, spies: play in order counteract, trap, spy, spymaster
+        val normalCards = hand.withIndex().filter { it.value.isNormal }
+        val sorted = normalCards.sortedBy { it.value.score!! }
+        sorted.firstOrNull { it.value.score!! >= Card.RAM.score!! }?.let { return it.index }
 
+        return super.duel(involvedPlayers, previousRounds)
     }
-
-    override fun spy(): Int {
-        // spy from the player with the highest known card
-        return cardTracker.knownCards.maxKeyByOrNull { cards -> cards.maxByNullableOrNull { it.score } }
-            ?: game.activePlayers.filter { it.index != playerIndex }.random(random).index // spy a random player
-    }
-
 
     // what our expected haul from throwing a trap is
     // Looks at last round
     private fun trapDesire(
     ): Double {
-        if (hand.count { it.isTrap } == 0 && hand.count { it.isCounteract }) {
-            return 0
-        }
-
         var trapDesire = 0.0
         // num players with one or two cards in their hand
         // todo weight small number of cards players when we know their hand
@@ -126,12 +131,7 @@ class MatthewPlayer(
         return trapDesire
     }
 
-    // What our expected value for spying is and the best player to do so from
-    private fun spyDesire() {
-
-    }
-
     companion object : Factory {
-        override fun create(playerIndex: Int, game: Game) = MatthewPlayer(playerIndex, game)
+        override fun create(playerIndex: Int, game: Game) = LessSimpleMatthewPlayer(playerIndex, game)
     }
 }

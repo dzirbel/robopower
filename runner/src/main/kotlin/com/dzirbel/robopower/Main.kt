@@ -1,5 +1,6 @@
 package com.dzirbel.robopower
 
+import com.mdzirbel.robopower.LessSimpleMatthewPlayer
 import com.mdzirbel.robopower.MatthewPlayer
 import kotlinx.coroutines.runBlocking
 
@@ -9,7 +10,7 @@ val input = RunInput(
     players = listOf(
         SimplePlayer,
         LessSimplePlayer,
-        RandomPlayer,
+        LessSimpleMatthewPlayer,
         BoomChickaBoomPlayer,
         MatthewPlayer,
     ),
