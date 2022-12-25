@@ -13,6 +13,12 @@ class MultiSet<E>(elements: Map<E, Int> = emptyMap()) {
         get() = map.values.sum()
 
     /**
+     * A [Set] of elements which have been added.
+     */
+    val elements: Set<E>
+        get() = map.keys
+
+    /**
      * Adds a count for [element].
      */
     fun add(element: E) {

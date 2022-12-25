@@ -14,7 +14,6 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.TimeSource
 import kotlin.time.times
 
-// TODO calculate relative advantage for each position when randomizing order
 object Runner {
     @OptIn(FlowPreview::class)
     data class RunInput(
@@ -28,8 +27,11 @@ object Runner {
     data class Results(
         val input: RunInput,
         val winCounts: MultiSet<Int>, // counts of wins for each player index
+        val winCountByPosition: MultiSet<Int>, // count of wins for each position in the game (going first vs last)
         val tieCounts: MultiSet<Int>, // counts of ties for each player index
+        val tieCountByPosition: MultiSet<Int>, // count of ties for each position in the game (going first vs last)
         val totalTies: Int, // total number of ties
+        val roundCounts: MultiSet<Int>, // counts of how many rounds each game took
         val playerLogicTime: MutableMap<Int, Duration>, // total time spent within player logic for each player index
         val playerChoiceExceptions: MultiSet<Int>, // number of times each player index threw a choice exception
         val playerChoiceExceptionExamples: MutableMap<Int, Throwable>, // single example of choice exceptions
@@ -45,9 +47,12 @@ object Runner {
     @OptIn(FlowPreview::class, ExperimentalTime::class)
     suspend fun run(input: RunInput, printIncrementPercent: Int? = 5): Results {
         val winCounts = MultiSet<Int>()
+        val winCountByPosition = MultiSet<Int>()
         val tieCounts = MultiSet<Int>()
+        val tieCountByPosition = MultiSet<Int>()
         val playerLogicTime = mutableMapOf<Int, Duration>()
         var totalTies = 0
+        val roundCounts = MultiSet<Int>()
 
         val playerChoiceExceptions = MultiSet<Int>()
         val playerChoiceExceptionExamples = mutableMapOf<Int, Throwable>()
@@ -91,11 +96,16 @@ object Runner {
                                 }
                             }
 
+                            roundCounts.add(gameResult.game.turnCount)
                             when (gameResult) {
-                                is GameResult.Winner -> winCounts.add(factories[gameResult.winner].index)
+                                is GameResult.Winner -> {
+                                    winCounts.add(factories[gameResult.winner].index)
+                                    winCountByPosition.add(gameResult.winner)
+                                }
                                 is GameResult.Tied -> {
                                     totalTies++
                                     tieCounts.addAll(gameResult.tiedPlayers.map { factories[it].index })
+                                    tieCountByPosition.addAll(gameResult.tiedPlayers)
                                 }
                             }
                         }
@@ -141,8 +151,11 @@ object Runner {
         return Results(
             input = input,
             winCounts = winCounts,
+            winCountByPosition = winCountByPosition,
             tieCounts = tieCounts,
+            tieCountByPosition = tieCountByPosition,
             totalTies = totalTies,
+            roundCounts = roundCounts,
             playerLogicTime = playerLogicTime,
             playerChoiceExceptions = playerChoiceExceptions,
             playerChoiceExceptionExamples = playerChoiceExceptionExamples,
@@ -207,9 +220,31 @@ object Runner {
             println()
         }
         println("Total ties : ${results.totalTies} (${formatPercent(results.totalTies, successfulGames)})")
+
+        println()
+        println("Winrate by position in game:")
+        repeat(results.input.players.size) { position ->
+            val wins = results.winCountByPosition.count(position)
+            val ties = results.tieCountByPosition.count(position)
+            println(
+                "  #${position + 1} : $wins wins (${formatPercent(wins, successfulGames)}); " +
+                    "$ties ties (${formatPercent(ties, successfulGames)})",
+            )
+        }
+
+        println()
+        val minRounds = results.roundCounts.elements.min()
+        val maxRounds = results.roundCounts.elements.max()
+        val maxRoundChars = maxRounds.toString().length
+        println("Rounds per game (avg: ${results.roundCounts.elements.average().roundTo(places = 2)}):")
+        for (roundCount in minRounds..maxRounds) {
+            println("  ${roundCount.toString().padStart(maxRoundChars)} : ${results.roundCounts.count(roundCount)}")
+        }
     }
 
+    private fun Double.roundTo(places: Int = 2): String = String.format("%.${places}f", this)
+
     private fun formatPercent(numerator: Int, denominator: Int): String {
-        return String.format("%.2f%%", 100 * (numerator.toDouble() / denominator))
+        return (100 * (numerator.toDouble() / denominator)).roundTo(places = 2) + "%"
     }
 }
