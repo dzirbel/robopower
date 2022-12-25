@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
     implementation(project(":lib"))
+    implementation(project(":player-alex"))
     implementation(project(":player-dominic"))
     implementation(project(":player-matthew"))
 }

@@ -7,9 +7,9 @@ val input = RunInput(
     games = 100_000,
     players = listOf(
         SimplePlayer,
-        SimplePlayer,
+        LessSimplePlayer,
         RandomPlayer,
-        RandomPlayer,
+        BoomChickaBoomPlayer
     ),
 )
 
