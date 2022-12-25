@@ -4,11 +4,11 @@ import kotlinx.coroutines.runBlocking
 
 // constants specifying the game to be run; try to avoid committing changes to reduce merge conflicts
 val input = RunInput(
-    games = 1_000_000,
+    games = 100_000,
     players = listOf(
         SimplePlayer,
-        RandomPlayer,
         SimplePlayer,
+        RandomPlayer,
         RandomPlayer,
     ),
 )
