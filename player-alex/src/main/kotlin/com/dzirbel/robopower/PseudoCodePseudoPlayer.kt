@@ -14,6 +14,14 @@ open class PseudoCodePseudoPlayer(
     game: Game,
     private val random: Random = Random.Default,
 ) : PlayerWithCardTracker(playerIndex, game) {
+    private val DuelResult.allCards: Map<Int, List<Card>>
+        get() = rounds.fold(mutableMapOf()) { acc, round ->
+            for ((playerIndex, card) in round.playedCards) {
+                acc.compute(playerIndex) { _, cards -> cards.orEmpty().plus(card) }
+            }
+            acc
+        }
+    
     override fun discard(): Int {
         // if (has SpyMaster && another player has <= 2 cards): play SpyMaster
         // if (has SpyMaster && we have <= 4 cards): play SpyMaster
@@ -35,6 +43,18 @@ open class PseudoCodePseudoPlayer(
 
     override fun spy(): Int {
         // spy from player with the fewest cards
+    }
+
+    fun handMaxStrength(): Int {
+        return hand.map{card: Card -> card.score}.filterNotNull().max()
+    }
+
+    fun hasTrap(): Boolean {
+        return hand.filter { it.isTrap }.isNotEmpty()
+    }
+
+    fun hasCounteract(): Boolean {
+        return hand.filter { it.isCounteract }.isNotEmpty()
     }
 
     companion object : Factory {
