@@ -2,7 +2,8 @@ package com.dzirbel.robopower
 
 import kotlinx.coroutines.runBlocking
 
-val input = Runner.RunInput(
+// constants specifying the game to be run; try to avoid committing changes to reduce merge conflicts
+val input = RunInput(
     games = 1_000_000,
     players = listOf(
         SimplePlayer,
@@ -14,5 +15,5 @@ val input = Runner.RunInput(
 
 fun main() {
     val results = runBlocking { Runner.run(input) }
-    Runner.printResults(results)
+    ResultsPrinter.printResults(results)
 }
