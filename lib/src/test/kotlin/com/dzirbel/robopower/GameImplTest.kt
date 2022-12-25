@@ -1,8 +1,10 @@
 package com.dzirbel.robopower
 
+import com.dzirbel.robopower.util.MultiSet
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.random.Random
 
 class GameImplTest {
@@ -15,7 +17,6 @@ class GameImplTest {
     fun `trivial one-on-one game runs successfully`() {
         val sortedNormalCards = Card.deck.filter { it.isNormal }.sortedBy { it.score }
         val game = buildGame(
-            playerFactories = listOf(InOrderPlayer, InOrderPlayer),
             sortedNormalCards.take(12), // player 1 gets the 12 lowest cards (weakest first)
             sortedNormalCards.takeLast(12).reversed(), // player 2 gets the 12 highest cards (strongest first)
         )
@@ -43,7 +44,6 @@ class GameImplTest {
     @Test
     fun `single round with spy`() {
         val game = buildGame(
-            playerFactories = listOf(InOrderPlayer, InOrderPlayer),
             listOf(Card.SPY, Card.SLICE, Card.BUZZY, Card.BUZZY, Card.BUZZY, Card.BUZZY, Card.BUZZY),
             listOf(Card.ROBO_STRIKER, Card.WIND, Card.WIND, Card.WIND, Card.WIND, Card.WIND),
         )
@@ -66,16 +66,54 @@ class GameImplTest {
         assertEquals(eventLog, game.eventLog)
     }
 
+    @Test
+    fun `maximum double duel exhausts the deck`() {
+        // 4 player game: players 3 and 4 exist only to hold counteracts and cards with odd multiplicities, since these
+        // could not tie and would end the duel
+        // note that this abuses buildGame to add the rest of the cards in the deck in order, which happen (as a result
+        // of taking out the odd multiplicities) to be dealt to players 1 and 2 exactly so that each round turns into a
+        // tie, but instead of fully specifying the cards each player gets we only include an arbitrary number
+        val game = buildGame(
+            listOf(
+                Card.SPY_MASTER, // discarded
+                Card.BUZZY, // round 1 (cannot be a trap round so that only players 1 and 2 are involved)
+                Card.BUZZY, // round 2
+                Card.BUZZY, // round 3
+                Card.TRAP, // round 4
+                Card.TRAP, // round 5: end of starting hand
+                Card.TRAP, // round 6: drawn at the start of first turn
+                // rounds 7 and 8: from stolen cards (traps)
+            ),
+            listOf(
+                Card.TRAP, // stolen by spy master
+                Card.TRAP, // stolen by spy master
+                Card.BUZZY, // round 1
+                Card.BUZZY, // round 2
+                Card.BUZZY, // round 3
+                Card.TRAP, // round 4: end of starting hand
+                Card.TRAP, // round 5
+                Card.TRAP, // round 6
+                Card.TRAP, // round 7
+                Card.TRAP, // round 8
+            ),
+
+            // card holders
+            listOf(Card.WIND, Card.SHOCK, Card.ROCK, Card.COUNTERACT, Card.COUNTERACT, Card.COUNTERACT),
+            listOf(Card.BLADE, Card.ALX, Card.BRAINIAC, Card.CRUSHER, Card.SLICE, Card.ROBO_STRIKER),
+        )
+
+        assertThrows<Deck.DeckExhaustedException> { game.run() }
+    }
+
     /**
      * Builds a [Game] where the cards for each player are pre-determined by [cardsByPlayer] by inserting them in the
-     * deck one-by-one in a round robin style.
+     * deck one-by-one in a round-robin style.
      */
-    private fun buildGame(playerFactories: List<Player.Factory>, vararg cardsByPlayer: List<Card>): GameImpl {
-        assert(playerFactories.size == cardsByPlayer.size)
+    private fun buildGame(vararg cardsByPlayer: List<Card>): GameImpl {
         assert(cardsByPlayer.all { it.size >= GameImpl.STARTING_CARDS })
 
         val remainingCardsByPlayer = cardsByPlayer.map { it.toMutableList() }
-        val usedCardCounts = mutableMapOf<Card, Int>()
+        val usedCardCounts = MultiSet<Card>()
         val cardList = buildList {
             // continue as long as the provided card list is non-empty in round-robin order for each draw; this works
             // for both the initial starting deal and allows skipping players in the draw sequence after they have been
@@ -85,14 +123,14 @@ class GameImplTest {
                     if (playerCards.isNotEmpty()) {
                         val card = playerCards.removeFirst()
                         add(card)
-                        usedCardCounts.compute(card) { _, count -> (count ?: 0) + 1 }
+                        usedCardCounts.add(card)
                     }
                 }
             }
 
             // now fill in all the remaining cards which are not assigned to any player; order here should not matter
             for (card in Card.values()) {
-                val usedCount = usedCardCounts[card] ?: 0
+                val usedCount = usedCardCounts.count(card)
                 assert(usedCount <= card.multiplicity)
                 repeat(card.multiplicity - usedCount) {
                     add(card)
@@ -101,7 +139,7 @@ class GameImplTest {
         }
 
         val deck = Deck(drawPile = cardList.reversed(), random = allZeroRandom)
-        return GameImpl(playerFactories = playerFactories, deck = deck, random = allZeroRandom)
+        return GameImpl(playerFactories = cardsByPlayer.map { InOrderPlayer }, deck = deck, random = allZeroRandom)
     }
 
     private fun buildEventLog(builder: EventLogBuilder.() -> Unit): List<GameEvent> {
