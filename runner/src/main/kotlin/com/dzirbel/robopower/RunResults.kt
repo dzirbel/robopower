@@ -21,4 +21,6 @@ data class RunResults(
 ) {
     val successfulGames
         get() = winCounts.total + totalTies
+
+    fun percentOfGames(games: Int): String = formatPercent(games, successfulGames)
 }
