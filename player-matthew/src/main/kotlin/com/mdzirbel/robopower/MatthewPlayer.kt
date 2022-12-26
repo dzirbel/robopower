@@ -1,6 +1,10 @@
 package com.mdzirbel.robopower
 
-import com.dzirbel.robopower.*
+import com.dzirbel.robopower.DuelRound
+import com.dzirbel.robopower.Game
+import com.dzirbel.robopower.GameEvent
+import com.dzirbel.robopower.PlayerWithCardTracker
+import com.dzirbel.robopower.onEventOfType
 import com.dzirbel.robopower.util.indexOfFirstOrNull
 import com.dzirbel.robopower.util.indexOfMaxOrNull
 import com.dzirbel.robopower.util.indexOfMinOrNull
@@ -87,8 +91,8 @@ class MatthewPlayer(
     // Looks at last round
     private fun trapDesire(
     ): Double {
-        if (hand.count { it.isTrap } == 0 && hand.count { it.isCounteract }) {
-            return 0
+        if (hand.count { it.isTrap } == 0 && hand.count { it.isCounteract } == 0) {
+            return 0.0
         }
 
         var trapDesire = 0.0

@@ -52,17 +52,23 @@ subprojects {
     }
 
     afterEvaluate {
+        val hasDetekt = extensions.findByName("detekt") != null
+
         dependencies {
-            detektPlugins(libs.detekt.formatting)
+            if (hasDetekt) {
+                detektPlugins(libs.detekt.formatting)
+            }
 
             testRuntimeOnly(libs.junit.engine)
             testImplementation(libs.junit.api)
             testImplementation(libs.junit.params)
         }
 
-        tasks.detekt.configure {
-            // run detekt with type resolution
-            dependsOn(tasks.detektMain)
+        if (hasDetekt) {
+            tasks.detekt.configure {
+                // run detekt with type resolution
+                dependsOn(tasks.detektMain)
+            }
         }
 
         tasks.test {

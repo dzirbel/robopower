@@ -82,6 +82,7 @@ object ResultsPrinter {
         }
     }
 
+    @Suppress("MagicNumber")
     private fun printRoundInfo(roundCounts: MultiSet<Int>, verbose: Boolean) {
         val roundMap = roundCounts.map
         val min = roundMap.keys.min()
@@ -110,7 +111,7 @@ object ResultsPrinter {
         var progress = 0
         for ((round, count) in this.entries.sortedBy { it.key }) {
             progress += count
-            if (progress >= (total * percentile) / 100) {
+            if (progress >= total * percentile / 100) {
                 return round
             }
         }

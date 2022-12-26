@@ -17,12 +17,14 @@ object Runner {
     /**
      * Runs games based on [input].
      *
+     * @param input specifies the parameters for the games
      * @param printIncrementPercent whole-number percentage of [RunInput.games] when a progress message should be
      *  printed, e.g. 5 = 5%
      */
     @OptIn(FlowPreview::class, ExperimentalTime::class)
     suspend fun run(
         input: RunInput,
+        @Suppress("MagicNumber")
         printIncrementPercent: Int? = if (input.verbose) 5 else 20,
     ): RunResults {
         val winCounts = MultiSet<Int>()
