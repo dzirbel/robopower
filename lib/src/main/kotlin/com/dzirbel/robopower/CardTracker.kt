@@ -9,7 +9,12 @@ import com.dzirbel.robopower.util.MultiSet
  *  one is spied away, then when they play a card in a duel it is known which was spied and this card can be deduced in
  *  the hand of the player who stole it (but currently is not)
  */
-class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, private val getHand: () -> List<Card>) {
+class CardTracker(
+    game: Game,
+    private val deck: Deck,
+    private val trackingPlayerIndex: Int,
+    private val getHand: () -> List<Card>,
+) {
     /**
      * The currently known cards in the game, as a map from player index to the known cards in their hand. This
      * [trackingPlayerIndex] is not included in the map.
@@ -124,7 +129,7 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
      * A callback which must be invoked whenever this [trackingPlayerIndex] receives [card] via spy from
      * [fromPlayerIndex], typically from [Player.onReceiveSpyCard].
      */
-    fun onReceiveSpyCard(card: Card, fromPlayerIndex: Int) {
+    internal fun onReceiveSpyCard(card: Card, fromPlayerIndex: Int) {
         _knownCards.getValue(fromPlayerIndex).remove(card)
     }
 
@@ -132,7 +137,7 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
      * A callback which must be invoked whenever this [trackingPlayerIndex] has a card [card] stolen via spy by
      * [byPlayerIndex], typically from [Player.onCardStolen].
      */
-    fun onCardStolen(card: Card, byPlayerIndex: Int) {
+    internal fun onCardStolen(card: Card, byPlayerIndex: Int) {
         _knownCards.getValue(byPlayerIndex).add(card)
     }
 
@@ -149,7 +154,7 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
 
         val cards = MultiSet(elements = Card.values().associateWith { it.multiplicity })
         cards.removeAll(getHand())
-        cards.removeAll(game.gameState.deck.discardPile)
+        cards.removeAll(deck.discardPile)
         for ((_, knownCards) in _knownCards) {
             cards.removeAll(knownCards)
         }
@@ -181,6 +186,8 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
      * copies.
      */
     private fun <T> MutableCollection<T>.removeEach(elements: Collection<T>) {
-        for (element in elements) { remove(element) }
+        for (element in elements) {
+            remove(element)
+        }
     }
 }

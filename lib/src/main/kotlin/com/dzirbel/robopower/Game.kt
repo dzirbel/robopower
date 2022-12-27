@@ -17,6 +17,17 @@ class Game(
      */
     val gameState = GameState(deck = deck, playerFactories = playerFactories, game = this)
 
+    /**
+     * The [PlayerState]s for each player; centralized in [Game] so that if there are multiple players for the same
+     * index (for composite players which rely on multiple player instances), they all share the same state (and
+     * [CardTracker], etc.).
+     */
+    internal val playerStates: List<PlayerState> by lazy {
+        List(playerFactories.size) { playerIndex ->
+            PlayerState(playerIndex = playerIndex, gameState = gameState, game = this)
+        }
+    }
+
     private val eventListeners: MutableList<(GameEvent) -> Unit> = mutableListOf()
 
     private val playerCardSuppliers: Iterable<IndexedValue<Dueler.PlayerCardSupplier.FromPlayerAndDeck>> by lazy {
@@ -124,6 +135,11 @@ class Game(
             byPlayerIndex = gameState.upPlayerIndex,
         )
         gameState.upPlayer.receiveSpyCard(card = spiedCard, fromPlayerIndex = spiedPlayerIndex)
+
+        playerStates[spiedPlayerIndex].cardTracker
+            .onCardStolen(card = spiedCard, byPlayerIndex = gameState.upPlayerIndex)
+        playerStates[gameState.upPlayerIndex].cardTracker
+            .onReceiveSpyCard(card = spiedCard, fromPlayerIndex = spiedPlayerIndex)
 
         emitEvent(GameEvent.Spied(gameState = gameState, spied = spiedPlayerIndex, remainingCards = remainingCards))
 

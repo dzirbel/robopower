@@ -109,14 +109,10 @@ abstract class Player(val playerIndex: Int, game: Game) : DiscardStrategy, SpySt
 
     val gameState: GameState = game.gameState
 
-    protected var cardTracker: CardTracker = CardTracker(
-        game = game,
-        trackingPlayerIndex = playerIndex,
-        getHand = { playerState._hand },
-    )
-        private set
+    protected val playerState: PlayerState by lazy { game.playerStates[playerIndex] }
 
-    protected val playerState = PlayerState(playerIndex = playerIndex, gameState = gameState, cardTracker = cardTracker)
+    protected val cardTracker: CardTracker
+        get() = playerState.cardTracker
 
     protected val hand: List<Card>
         get() = playerState.hand
@@ -204,7 +200,6 @@ abstract class Player(val playerIndex: Int, game: Game) : DiscardStrategy, SpySt
      */
     internal fun receiveSpyCard(card: Card, fromPlayerIndex: Int) {
         playerState._hand.add(card)
-        cardTracker.onReceiveSpyCard(card = card, fromPlayerIndex = fromPlayerIndex)
         catchingPlayerExceptions { onReceiveSpyCard(card = card, fromPlayerIndex = fromPlayerIndex) }
     }
 
@@ -214,7 +209,6 @@ abstract class Player(val playerIndex: Int, game: Game) : DiscardStrategy, SpySt
      */
     internal fun stealRandomCard(byPlayerIndex: Int, random: Random = Random.Default): Pair<Card, Int> {
         val stolenCard = playerState._hand.removeAt(index = random.nextInt(until = playerState._hand.size))
-        cardTracker.onCardStolen(card = stolenCard, byPlayerIndex = byPlayerIndex)
         catchingPlayerExceptions { onCardStolen(card = stolenCard, byPlayerIndex = byPlayerIndex) }
         return Pair(stolenCard, playerState._hand.size)
     }

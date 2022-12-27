@@ -4,7 +4,8 @@ package com.dzirbel.robopower
  * Contains the (mutable) private state of the game from the point of view of the player with index [playerIndex], such
  * as the player's [hand] and a [cardTracker].
  */
-data class PlayerState(
+@Suppress("UseDataClass")
+class PlayerState internal constructor(
     /**
      * The index in [GameState.players] of the player whose point of view is being captured.
      */
@@ -16,11 +17,18 @@ data class PlayerState(
      */
     val gameState: GameState,
 
+    game: Game,
+) {
     /**
      * A [CardTracker] which does bookkeeping on known cards in other players' hands.
      */
-    val cardTracker: CardTracker,
-) {
+    val cardTracker: CardTracker = CardTracker(
+        game = game,
+        deck = gameState.deck,
+        trackingPlayerIndex = playerIndex,
+        getHand = { _hand },
+    )
+
     @Suppress("VariableNaming") // TODO refactor to make private
     internal val _hand: MutableList<Card> = mutableListOf()
 

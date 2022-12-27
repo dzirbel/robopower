@@ -4,9 +4,6 @@ import com.dzirbel.robopower.util.mapToFirstOrNull
 
 /**
  * A [Player] which delegates to the given [discardStrategy], [spyStrategy], and [duelStrategy] to make its decisions.
- *
- * TODO CardTrackers of delegated players are not updated; perhaps have them subscribe to callbacks on shared
- *  PlayerState instead
  */
 class CompositePlayer(
     playerIndex: Int,
