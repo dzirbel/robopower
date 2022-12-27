@@ -94,14 +94,16 @@ object Runner {
                             when (throwable) {
                                 is PlayerChoiceException -> {
                                     val playerIndex = throwable.player.playerIndex
-                                    playerChoiceExceptionExamples.putIfAbsent(playerIndex, throwable)
-                                    playerChoiceExceptions.add(playerIndex)
+                                    val factoryIndex = factories[playerIndex].index
+                                    playerChoiceExceptionExamples.putIfAbsent(factoryIndex, throwable)
+                                    playerChoiceExceptions.add(factoryIndex)
                                 }
 
                                 is PlayerThrownException -> {
                                     val playerIndex = throwable.player.playerIndex
-                                    playerThrownExceptionExamples.putIfAbsent(playerIndex, throwable)
-                                    playerThrownExceptions.add(playerIndex)
+                                    val factoryIndex = factories[playerIndex].index
+                                    playerThrownExceptionExamples.putIfAbsent(factoryIndex, throwable)
+                                    playerThrownExceptions.add(factoryIndex)
                                 }
 
                                 else -> {
