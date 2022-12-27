@@ -1,6 +1,5 @@
 package com.dzirbel.robopower
 
-import com.mdzirbel.robopower.LessSimpleMatthewPlayer
 import com.mdzirbel.robopower.MatthewPlayer
 import com.mdzirbel.robopower.MatthewTrapStrategy
 import kotlinx.coroutines.runBlocking
@@ -11,17 +10,12 @@ val input = RunInput(
     players = listOf(
         SimplePlayer,
         LessSimplePlayer,
-        LessSimpleMatthewPlayer,
-        BoomChickaBoomPlayer,
         MatthewPlayer,
-        CompositePlayer.fromPlayers(
-            discarder = SimplePlayer,
-            spier = SimplePlayer,
-            dueler = MatthewPlayer,
-        ),
-        SimplePlayer.withStrategies(
+        // LessSimplePlayer with Matthew's trap strategy
+        LessSimplePlayer.withStrategies(
             duelStrategy = MatthewTrapStrategy,
         ),
+        PseudoCodePseudoPlayer,
     ),
 )
 

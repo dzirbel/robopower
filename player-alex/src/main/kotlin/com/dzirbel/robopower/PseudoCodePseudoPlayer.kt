@@ -7,8 +7,9 @@ import com.dzirbel.robopower.util.minByNullableOrNull
 import kotlin.random.Random
 
 /**
+ * Player originally written as psuedo-code by Alex.
  */
-open class PseudoCodePseudoPlayer(
+class PseudoCodePseudoPlayer(
     playerIndex: Int,
     game: Game,
     private val random: Random = Random.Default,
@@ -115,18 +116,6 @@ open class PseudoCodePseudoPlayer(
         // spy from player with the fewest cards
         return gameState.activePlayers.filter { it.index != playerIndex }.minByOrNull { it.value.handSize() }?.index
             ?: error("could not find player to spy")
-    }
-
-    fun handMaxStrength(): Int {
-        return hand.map{card: Card -> card.score}.filterNotNull().max()
-    }
-
-    fun hasTrap(): Boolean {
-        return hand.filter { it.isTrap }.isNotEmpty()
-    }
-
-    fun hasCounteract(): Boolean {
-        return hand.filter { it.isCounteract }.isNotEmpty()
     }
 
     companion object : Factory {
