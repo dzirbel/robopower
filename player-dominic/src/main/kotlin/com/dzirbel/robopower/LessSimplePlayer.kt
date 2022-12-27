@@ -26,7 +26,7 @@ class LessSimplePlayer(
             if (hand.size - spies == 1) return spyIndex
 
             cardTracker.knownCards.mapValues { (playerIndex, knownCards) ->
-                val handSize = game.players[playerIndex].handSize()
+                val handSize = gameState.players[playerIndex].handSize()
                 if (knownCards.size == handSize) knownCards.minByOrNull { it.rank } else null
             }
                 .filterValues { it != null }
@@ -50,7 +50,7 @@ class LessSimplePlayer(
             ?.score
             ?: Card.ALX.score!!
 
-        val lastDuel = game.eventLog.lastOrNull { it is GameEvent.Duel } as? GameEvent.Duel
+        val lastDuel = gameState.eventLog.lastOrNull { it is GameEvent.Duel } as? GameEvent.Duel
         val highestRankLastDuel: Int? = lastDuel?.result?.allCards?.entries
             ?.maxByNullableOrNull { it.value.maxByOrNull { card -> card.rank } }
             ?.value

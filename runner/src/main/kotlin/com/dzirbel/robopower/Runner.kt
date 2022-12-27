@@ -61,7 +61,7 @@ object Runner {
                         }
 
                         val result = runCatching {
-                            requireNotNull(GameImpl(playerFactories = factories.map { it.value }).run())
+                            requireNotNull(Game(playerFactories = factories.map { it.value }).run())
                         }
 
                         emit(Pair(factories, result))
@@ -71,13 +71,13 @@ object Runner {
                     result
                         .onSuccess { gameResult ->
                             factories.forEachIndexed { gameIndex, (originalIndex, _) ->
-                                val player = gameResult.game.players[gameIndex]
+                                val player = gameResult.game.gameState.players[gameIndex]
                                 playerLogicTime.compute(originalIndex) { _, duration ->
                                     (duration ?: Duration.ZERO) + player.totalPlayerLogicTime
                                 }
                             }
 
-                            roundCounts.add(gameResult.game.turnCount)
+                            roundCounts.add(gameResult.game.gameState.turnCount)
                             when (gameResult) {
                                 is GameResult.Winner -> {
                                     winCounts.add(factories[gameResult.winner].index)

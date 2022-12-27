@@ -1,6 +1,16 @@
 package com.dzirbel.robopower.util
 
 /**
+ * Returns the first non-null result of [transform], or null if there are no such results.
+ */
+fun <T, R> Iterable<T>.mapToFirstOrNull(transform: (T) -> R?): R? {
+    for (element in this) {
+        transform(element)?.let { return it }
+    }
+    return null
+}
+
+/**
  * Returns the index of the first element matching the given [predicate], or null if the list does not contain any such
  * element.
  */

@@ -1,6 +1,9 @@
 package com.dzirbel.robopower
 
-import com.dzirbel.robopower.util.*
+import com.dzirbel.robopower.util.indexOfFirstOrNull
+import com.dzirbel.robopower.util.indexOfMinOrNull
+import com.dzirbel.robopower.util.maxByNullableOrNull
+import com.dzirbel.robopower.util.minByNullableOrNull
 import kotlin.random.Random
 
 /**
@@ -9,7 +12,7 @@ open class PseudoCodePseudoPlayer(
     playerIndex: Int,
     game: Game,
     private val random: Random = Random.Default,
-) : PlayerWithCardTracker(playerIndex, game) {
+) : Player(playerIndex, game) {
     private val DuelResult.allCards: Map<Int, List<Card>>
         get() = rounds.fold(mutableMapOf()) { acc, round ->
             for ((playerIndex, card) in round.playedCards) {
@@ -21,13 +24,13 @@ open class PseudoCodePseudoPlayer(
     override fun discard(): Int {
         // if (has SpyMaster && another player has <= 2 cards): play SpyMaster
         // if (has SpyMaster && we have <= 4 cards): play SpyMaster
-        if (hand.size <= 4 || game.players.any { it.handSize() <= 2 }) {
+        if (hand.size <= 4 || gameState.players.any { it.handSize() <= 2 }) {
             hand.indexOfFirstOrNull { it == Card.SPY_MASTER }?.let { return it }
         }
 
         // if (has Spy && another player has 1 card): play Spy
         // if (has Spy && we have <= 3 cards): play Spy
-        if (hand.size <= 3 || game.players.any { it.handSize() <= 3 }) {
+        if (hand.size <= 3 || gameState.players.any { it.handSize() <= 3 }) {
             hand.indexOfFirstOrNull { it == Card.SPY }?.let { return it }
         }
 
@@ -55,11 +58,11 @@ open class PseudoCodePseudoPlayer(
             hand.indexOfFirstOrNull { it.isCounteract }?.let { return it }
         }
 
-        val lastDuel = game.eventLog.lastOrNull { it is GameEvent.Duel } as? GameEvent.Duel
+        val lastDuel = gameState.eventLog.lastOrNull { it is GameEvent.Duel } as? GameEvent.Duel
 
         if (trapIndex != null) {
             // if (has Trap && another player has 1 card): play Trap
-            if (game.activePlayers.any { it.value.handSize(includeCardsInPlay = true) == 1 }) {
+            if (gameState.activePlayers.any { it.value.handSize(includeCardsInPlay = true) == 1 }) {
                 return trapIndex
             }
 
@@ -110,7 +113,7 @@ open class PseudoCodePseudoPlayer(
 
     override fun spy(): Int {
         // spy from player with the fewest cards
-        return game.activePlayers.filter { it.index != playerIndex }.minByOrNull { it.value.handSize() }?.index
+        return gameState.activePlayers.filter { it.index != playerIndex }.minByOrNull { it.value.handSize() }?.index
             ?: error("could not find player to spy")
     }
 

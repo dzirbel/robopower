@@ -3,13 +3,7 @@ package com.dzirbel.robopower
 import com.dzirbel.robopower.util.MultiSet
 
 /**
- * Provides bookkeeping for known cards in the game from public [GameEvent]s.
- *
- * This is intended to be used by a [Player] and should be initialized before the game is started (so [GameEvent]s are
- * not missed). For accuracy it is also required to invoke [onReceiveSpyCard] (by overriding [Player.onReceiveSpyCard])
- * and [onCardStolen] (by overriding [Player.onCardStolen]) whenever the tracking player receives a card via spy (so
- * that it can be removed from the known cards of the player spied); these callbacks are done automatically when
- * extending [PlayerWithCardTracker].
+ * Provides bookkeeping for known cards in the game from public [GameEvent]s and private [PlayerEvent]s.
  *
  * TODO this is not perfect and misses some higher-order logic; for example if a player has two cards (both known) and
  *  one is spied away, then when they play a card in a duel it is known which was spied and this card can be deduced in
@@ -23,7 +17,7 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
     val knownCards: Map<Int, List<Card>>
         get() = _knownCards.toMap()
 
-    private val _knownCards: MutableMap<Int, MutableList<Card>> = List(game.playerCount) { it }
+    private val _knownCards: MutableMap<Int, MutableList<Card>> = List(game.gameState.playerCount) { it }
         .minus(trackingPlayerIndex)
         .associateWith { mutableListOf<Card>() }
         .toMutableMap()
@@ -115,7 +109,7 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
         // if the discard pile is reshuffled in a one-on-one, we know exactly the cards held by the other player
         // TODO also true if there are e.g. 3 players and we know all the cards held by one of them
         game.onEventOfType<GameEvent.DiscardPileReshuffledIntoDrawPile> { event ->
-            val active = game.activePlayers.filter { it.index != trackingPlayerIndex }
+            val active = game.gameState.activePlayers.filter { it.index != trackingPlayerIndex }
             if (active.size == 1) {
                 val activePlayer = active.first().index
                 _knownCards[activePlayer] = Card.deck.toMutableList().apply {
@@ -155,7 +149,7 @@ class CardTracker(private val game: Game, private val trackingPlayerIndex: Int, 
 
         val cards = MultiSet(elements = Card.values().associateWith { it.multiplicity })
         cards.removeAll(getHand())
-        cards.removeAll(game.deck.discardPile)
+        cards.removeAll(game.gameState.deck.discardPile)
         for ((_, knownCards) in _knownCards) {
             cards.removeAll(knownCards)
         }

@@ -8,6 +8,21 @@ class IterableExtensionsTest {
     private val selectorMod5 = { value: Int? -> if (value != null) value % 5 else null }
 
     @Test
+    fun `mapToFirstOrNull maps to first non-null element`() {
+        assertEquals(6, listOf(1, 2, 3, 4).mapToFirstOrNull { if (it % 3 == 0) it * 2 else null })
+    }
+
+    @Test
+    fun `mapToFirstOrNull returns null for all null transformations`() {
+        assertNull(listOf(1, 2, 3, 4).mapToFirstOrNull { null })
+    }
+
+    @Test
+    fun `mapToFirstOrNull returns null empty list`() {
+        assertNull(emptyList<Int>().mapToFirstOrNull { it * 2 })
+    }
+
+    @Test
     fun `indexOfFirstOrNull with element found`() {
         assertEquals(2, listOf(1, 2, 3, 4).indexOfFirstOrNull { it % 3 == 0 })
     }

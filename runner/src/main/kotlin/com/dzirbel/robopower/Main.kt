@@ -2,6 +2,7 @@ package com.dzirbel.robopower
 
 import com.mdzirbel.robopower.LessSimpleMatthewPlayer
 import com.mdzirbel.robopower.MatthewPlayer
+import com.mdzirbel.robopower.MatthewTrapStrategy
 import kotlinx.coroutines.runBlocking
 
 // constants specifying the game to be run; try to avoid committing changes to reduce merge conflicts
@@ -13,6 +14,14 @@ val input = RunInput(
         LessSimpleMatthewPlayer,
         BoomChickaBoomPlayer,
         MatthewPlayer,
+        CompositePlayer.fromPlayers(
+            discarder = SimplePlayer,
+            spier = SimplePlayer,
+            dueler = MatthewPlayer,
+        ),
+        SimplePlayer.withStrategies(
+            duelStrategy = MatthewTrapStrategy,
+        ),
     ),
 )
 

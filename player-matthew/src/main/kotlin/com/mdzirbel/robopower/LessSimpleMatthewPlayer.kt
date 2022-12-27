@@ -1,6 +1,10 @@
 package com.mdzirbel.robopower
 
-import com.dzirbel.robopower.*
+import com.dzirbel.robopower.Card
+import com.dzirbel.robopower.DuelResult
+import com.dzirbel.robopower.DuelRound
+import com.dzirbel.robopower.Game
+import com.dzirbel.robopower.GameEvent
 import com.dzirbel.robopower.util.indexOfFirstOrNull
 import com.dzirbel.robopower.util.maxByNullableOrNull
 import kotlin.random.Random
@@ -38,7 +42,7 @@ class LessSimpleMatthewPlayer(
             if (hand.size - spies == 1) return spyIndex
 
             cardTracker.knownCards.mapValues { (playerIndex, knownCards) ->
-                val handSize = game.players[playerIndex].handSize()
+                val handSize = gameState.players[playerIndex].handSize()
                 if (knownCards.size == handSize) knownCards.minByOrNull { it.rank } else null
             }
                 .filterValues { it != null }
@@ -62,7 +66,7 @@ class LessSimpleMatthewPlayer(
             ?.score
             ?: Card.ALX.score!!
 
-        val lastDuel = game.eventLog.lastOrNull { it is GameEvent.Duel } as? GameEvent.Duel
+        val lastDuel = gameState.eventLog.lastOrNull { it is GameEvent.Duel } as? GameEvent.Duel
         val highestRankLastDuel: Int? = lastDuel?.result?.allCards?.entries
             ?.maxByNullableOrNull { it.value.maxByOrNull { card -> card.rank } }
             ?.value
@@ -100,7 +104,7 @@ class LessSimpleMatthewPlayer(
         // num players with one or two cards in their hand
         // todo weight small number of cards players when we know their hand
         // so for bad hands only add weight for the fact that it's a card, good hands raise desire a lot
-        for ((i, player) in game.activePlayers) {
+        for ((i, player) in gameState.activePlayers) {
             if (player.handSize() == 1) {
                 val cardRank = cardTracker.knownCards[i]?.getOrNull(0).let { it?.rank }
                 trapDesire += cardRank ?: 13
@@ -126,7 +130,7 @@ class LessSimpleMatthewPlayer(
             ?.let { trapDesire += it / (playedCards.size - 1) }
 
         // we want traps more the further in the game we are
-        trapDesire += game.turnCount / (game.players.size * 4)
+        trapDesire += gameState.turnCount / (gameState.players.size * 4)
 
         return trapDesire
     }

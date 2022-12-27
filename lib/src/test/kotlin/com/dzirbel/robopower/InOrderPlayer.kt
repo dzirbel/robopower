@@ -5,7 +5,7 @@ package com.dzirbel.robopower
  */
 class InOrderPlayer(playerIndex: Int, game: Game) : Player(playerIndex, game) {
     override fun discard() = 0
-    override fun spy() = game.activePlayers.first { it.index != playerIndex && it.value.isActive }.index
+    override fun spy() = gameState.activePlayers.first { it.index != playerIndex && it.value.isActive }.index
     override fun duel(involvedPlayers: Set<Int>, previousRounds: List<DuelRound>) = 0
 
     companion object : Factory {

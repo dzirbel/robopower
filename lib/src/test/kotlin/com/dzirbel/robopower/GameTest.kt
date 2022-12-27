@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.random.Random
 
-class GameImplTest {
+class GameTest {
     // all-0 random generator; necessary for picking the spy card (so the first card is always chosen)
     private val allZeroRandom = object : Random() {
         override fun nextBits(bitCount: Int) = 0
@@ -24,7 +24,7 @@ class GameImplTest {
         val result = game.run()
 
         assertEquals(1, (result as GameResult.Winner).winner)
-        assertEquals(GameImpl.STARTING_CARDS, game.turnCount) // 1 turn for each starting card
+        assertEquals(Game.STARTING_CARDS, game.gameState.turnCount) // 1 turn for each starting card
 
         // note discarded and played cards by player 2 are cycled because retaining them puts them at the end of the
         // hand (new cards are also drawn to the end of the hand)
@@ -38,7 +38,7 @@ class GameImplTest {
             add(GameEvent.PlayerEliminated(turnCount = turn, upPlayerIndex = 1, eliminatedPlayerIndex = 0))
         }
 
-        assertEquals(eventLog, game.eventLog)
+        assertEquals(eventLog, game.gameState.eventLog)
     }
 
     @Test
@@ -51,7 +51,7 @@ class GameImplTest {
         val result = game.run(maxRounds = 1)
 
         assertNull(result)
-        assertEquals(1, game.turnCount)
+        assertEquals(1, game.gameState.turnCount)
 
         val eventLog = buildEventLog {
             turnEvents(
@@ -63,7 +63,7 @@ class GameImplTest {
             )
         }
 
-        assertEquals(eventLog, game.eventLog)
+        assertEquals(eventLog, game.gameState.eventLog)
     }
 
     @Test
@@ -109,8 +109,8 @@ class GameImplTest {
      * Builds a [Game] where the cards for each player are pre-determined by [cardsByPlayer] by inserting them in the
      * deck one-by-one in a round-robin style.
      */
-    private fun buildGame(vararg cardsByPlayer: List<Card>): GameImpl {
-        assert(cardsByPlayer.all { it.size >= GameImpl.STARTING_CARDS })
+    private fun buildGame(vararg cardsByPlayer: List<Card>): Game {
+        assert(cardsByPlayer.all { it.size >= Game.STARTING_CARDS })
 
         val remainingCardsByPlayer = cardsByPlayer.map { it.toMutableList() }
         val usedCardCounts = MultiSet<Card>()
@@ -139,7 +139,7 @@ class GameImplTest {
         }
 
         val deck = Deck(drawPile = cardList.reversed(), random = allZeroRandom)
-        return GameImpl(playerFactories = cardsByPlayer.map { InOrderPlayer }, deck = deck, random = allZeroRandom)
+        return Game(playerFactories = cardsByPlayer.map { InOrderPlayer }, deck = deck, random = allZeroRandom)
     }
 
     private fun buildEventLog(builder: EventLogBuilder.() -> Unit): List<GameEvent> {

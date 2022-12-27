@@ -18,7 +18,7 @@ class RandomPlayer(
 
     override fun duel(involvedPlayers: Set<Int>, previousRounds: List<DuelRound>) = random.nextInt(until = hand.size)
 
-    override fun spy() = game.activePlayers.filter { it.index != playerIndex }.random(random).index
+    override fun spy() = gameState.activePlayers.filter { it.index != playerIndex }.random(random).index
 
     companion object : Factory {
         override fun create(playerIndex: Int, game: Game) = RandomPlayer(playerIndex, game)

@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 class PlayerTest {
-    private val game = GameImpl(playerFactories = listOf(InOrderPlayer, InOrderPlayer))
+    private val game = Game(playerFactories = listOf(InOrderPlayer, InOrderPlayer))
 
     @Test
     fun `invalid index choices are caught`() {

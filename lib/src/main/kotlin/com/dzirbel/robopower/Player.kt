@@ -1,5 +1,6 @@
 package com.dzirbel.robopower
 
+import com.dzirbel.robopower.Player.Factory
 import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -11,9 +12,12 @@ import kotlin.time.TimeSource
  * To implement a player, override [discard] (to choose a card from the hand to discard each turn), [spy] (to choose a
  * player to steal from when discarding spies), and [duel] (to choose a card to play in a duel or double-duel). To
  * inform their strategy [Player]s may also listen for public [GameEvent]s via [Game.onEvent] (and [Game.onEventOfType])
- * or by accessing the [Game.eventLog] and may override callbacks [onDraw], [onCardStolen], etc. for private events.
+ * or by accessing the [GameState.eventLog] and may override callbacks [onDraw], [onCardStolen], etc. for private
+ * events.
+ *
+ * TODO update docs with strategies
  */
-abstract class Player(val playerIndex: Int, protected val game: Game) {
+abstract class Player(val playerIndex: Int, game: Game) : DiscardStrategy, SpyStrategy, DuelStrategy {
     /**
      * Factory wrapper to create a player; this essentially allows a convenient reference to the player constructor or
      * to pass in some easily-configurable parameters.
@@ -35,7 +39,7 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
      *
      * which would then be referenced as `val factory = MyPlayer.Factory(intelligence = 0)`.
      */
-    interface Factory {
+    fun interface Factory {
         /**
          * Optionally provides a user-readable name for players created by this factory with the given [playerIndex], by
          * default extracts the simple class name.
@@ -48,19 +52,41 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
          * Creates a new [Player] for a new [game] at the given [playerIndex].
          */
         fun create(playerIndex: Int, game: Game): Player
+
+        // TODO document
+        fun withStrategies(
+            discardStrategy: OptionalDiscardStrategy? = null,
+            spyStrategy: OptionalSpyStrategy? = null,
+            duelStrategy: OptionalDuelStrategy? = null,
+        ): Factory {
+            return Factory { playerIndex, game ->
+                val original = create(playerIndex, game)
+                CompositePlayer(
+                    playerIndex = playerIndex,
+                    game = game,
+                    discardStrategy = discardStrategy?.let {
+                        DiscardStrategy { playerState ->
+                            discardStrategy.discard(playerState) ?: original.discard()
+                        }
+                    }
+                        ?: original,
+                    spyStrategy = spyStrategy?.let {
+                        SpyStrategy { playerState ->
+                            spyStrategy.spy(playerState) ?: original.spy()
+                        }
+                    }
+                        ?: original,
+                    duelStrategy = duelStrategy?.let {
+                        DuelStrategy { playerState, involvedPlayers, previousRounds ->
+                            duelStrategy.duel(playerState, involvedPlayers, previousRounds)
+                                ?: original.duel(involvedPlayers, previousRounds)
+                        }
+                    }
+                        ?: original,
+                )
+            }
+        }
     }
-
-    private val _hand: MutableList<Card> = mutableListOf()
-
-    /**
-     * The current [Card]s in this [Player]'s hand.
-     *
-     * Cards are always added to the end of the list (including when returning them to the hand from a duel). It might
-     * be better to insert them at the index they were taken, but this can be very difficult to do (since only some of
-     * the played cards might be retained, with traps discarded) and the benefit is minimal.
-     */
-    protected val hand: List<Card>
-        get() = _hand.toList()
 
     /**
      * Counts of cards in play during a duel so that [isActive] and [handSize] can still be accurate.
@@ -73,13 +99,27 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
      * hand or in-play during a duel).
      */
     val isActive: Boolean
-        get() = cardsInPlay > 0 || _hand.isNotEmpty()
+        get() = cardsInPlay > 0 || playerState._hand.isNotEmpty()
 
     /**
      * Tracks the total time spent in implementation logic.
      */
     var totalPlayerLogicTime: Duration = Duration.ZERO
         private set
+
+    val gameState: GameState = game.gameState
+
+    protected var cardTracker: CardTracker = CardTracker(
+        game = game,
+        trackingPlayerIndex = playerIndex,
+        getHand = { playerState._hand },
+    )
+        private set
+
+    protected val playerState = PlayerState(playerIndex = playerIndex, gameState = gameState, cardTracker = cardTracker)
+
+    protected val hand: List<Card>
+        get() = playerState.hand
 
     /**
      * Chooses a card from the hand to be discarded, as an index of [hand].
@@ -90,7 +130,7 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
 
     /**
      * Chooses a player to steal a card from as a result of [discard]ing a [Card.SPY] or [Card.SPY_MASTER], as an index
-     * in [Game.players].
+     * in [GameState.players].
      *
      * The chosen player must still be active (have a non-empty hand) and cannot be this [Player]. The spied card will
      * be chosen randomly and passed to [onReceiveSpyCard].
@@ -101,8 +141,8 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
      * Chooses a card from the hand to be played in a duel among players with indexes [involvedPlayers], which may be a
      * double- (or triple-) duel as indicated by [previousRounds].
      *
-     * The initial round of dueling will have [involvedPlayers] just be [Game.activePlayers] and [previousRounds] be
-     * empty. If there is a double duel (no counteracts and either a tie among the lowest cards or multiple traps)
+     * The initial round of dueling will have [involvedPlayers] just be [GameState.activePlayers] and [previousRounds]
+     * be empty. If there is a double duel (no counteracts and either a tie among the lowest cards or multiple traps)
      * another call to [duel] will be made. The double-duel may also be in "trapping" mode where the highest card wins
      * and takes the entire field rather than the lowest card losing if any of the previous rounds had traps, i.e.
      * [DuelRoundResult.DoubleDuel.trapping] is true.
@@ -135,21 +175,27 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
      * [includeCardsInPlay] is true (the default).
      */
     fun handSize(includeCardsInPlay: Boolean = true): Int {
-        return if (includeCardsInPlay) _hand.size + cardsInPlay else _hand.size
+        return if (includeCardsInPlay) playerState._hand.size + cardsInPlay else playerState._hand.size
+    }
+
+    final override fun discard(playerState: PlayerState) = discard()
+    final override fun spy(playerState: PlayerState) = spy()
+    final override fun duel(playerState: PlayerState, involvedPlayers: Set<Int>, previousRounds: List<DuelRound>): Int {
+        return duel(involvedPlayers, previousRounds)
     }
 
     /**
      * Adds [card] to this player's hand during the initial deal, with no player callbacks.
      */
     internal fun deal(card: Card) {
-        _hand.add(card)
+        playerState._hand.add(card)
     }
 
     /**
      * Adds [card] to this player's hand from the draw at the beginning of their turn and calls [onDraw].
      */
     internal fun draw(card: Card) {
-        _hand.add(card)
+        playerState._hand.add(card)
         catchingPlayerExceptions { onDraw(card) }
     }
 
@@ -157,7 +203,8 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
      * Adds [card] to this player's hand after stealing it from [fromPlayerIndex] and calls [onReceiveSpyCard].
      */
     internal fun receiveSpyCard(card: Card, fromPlayerIndex: Int) {
-        _hand.add(card)
+        playerState._hand.add(card)
+        cardTracker.onReceiveSpyCard(card = card, fromPlayerIndex = fromPlayerIndex)
         catchingPlayerExceptions { onReceiveSpyCard(card = card, fromPlayerIndex = fromPlayerIndex) }
     }
 
@@ -166,9 +213,10 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
      * number of cards remaining in this player's hand; and invokes [onCardStolen].
      */
     internal fun stealRandomCard(byPlayerIndex: Int, random: Random = Random.Default): Pair<Card, Int> {
-        val stolenCard = _hand.removeAt(index = random.nextInt(until = _hand.size))
-        catchingPlayerExceptions { onCardStolen(stolenCard, byPlayerIndex) }
-        return Pair(stolenCard, _hand.size)
+        val stolenCard = playerState._hand.removeAt(index = random.nextInt(until = playerState._hand.size))
+        cardTracker.onCardStolen(card = stolenCard, byPlayerIndex = byPlayerIndex)
+        catchingPlayerExceptions { onCardStolen(card = stolenCard, byPlayerIndex = byPlayerIndex) }
+        return Pair(stolenCard, playerState._hand.size)
     }
 
     /**
@@ -178,11 +226,11 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
     internal fun doDiscard(): Card {
         val cardIndex = catchingPlayerExceptions { discard() }
 
-        if (cardIndex !in _hand.indices) {
+        if (cardIndex !in playerState._hand.indices) {
             throw PlayerChoiceException.InvalidDiscard(player = this, cardIndex = cardIndex)
         }
 
-        return _hand.removeAt(cardIndex)
+        return playerState._hand.removeAt(cardIndex)
     }
 
     /**
@@ -194,19 +242,19 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
             throw PlayerChoiceException.InvalidSpy(
                 player = this,
                 spiedPlayerIndex = spiedPlayerIndex,
-                players = game.players.size,
+                players = gameState.playerCount,
             )
         }
 
-        if (spiedPlayerIndex !in game.players.indices) {
+        if (spiedPlayerIndex !in gameState.players.indices) {
             throw PlayerChoiceException.InvalidSpy(
                 player = this,
                 spiedPlayerIndex = spiedPlayerIndex,
-                players = game.players.size,
+                players = gameState.playerCount,
             )
         }
 
-        val spiedPlayer = game.players[spiedPlayerIndex]
+        val spiedPlayer = gameState.players[spiedPlayerIndex]
         if (spiedPlayer.handSize() == 0) {
             throw PlayerChoiceException.SpiedEmptyHand(player = this, spiedPlayerIndex = spiedPlayerIndex)
         }
@@ -221,18 +269,18 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
     internal fun doDuel(involvedPlayers: Set<Int>, previousRounds: List<DuelRound>): Card {
         assert(playerIndex in involvedPlayers)
 
-        val cardIndex = if (_hand.size == 1) {
+        val cardIndex = if (playerState._hand.size == 1) {
             0
         } else {
             catchingPlayerExceptions { duel(involvedPlayers, previousRounds) }
         }
 
-        if (cardIndex !in _hand.indices) {
+        if (cardIndex !in playerState._hand.indices) {
             throw PlayerChoiceException.InvalidDuel(player = this, cardIndex = cardIndex)
         }
 
         cardsInPlay++
-        return _hand.removeAt(cardIndex)
+        return playerState._hand.removeAt(cardIndex)
     }
 
     /**
@@ -241,8 +289,8 @@ abstract class Player(val playerIndex: Int, protected val game: Game) {
      */
     internal fun postDuel(retainedCards: List<Card>?, trappedCards: List<Card>?) {
         cardsInPlay = 0
-        retainedCards?.let { _hand.addAll(it) }
-        trappedCards?.let { _hand.addAll(it) }
+        retainedCards?.let { playerState._hand.addAll(it) }
+        trappedCards?.let { playerState._hand.addAll(it) }
     }
 
     /**

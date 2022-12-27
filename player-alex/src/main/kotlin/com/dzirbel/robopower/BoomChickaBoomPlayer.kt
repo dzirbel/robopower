@@ -14,7 +14,7 @@ class BoomChickaBoomPlayer(
     playerIndex: Int,
     game: Game,
     private val random: Random = Random.Default,
-) : PlayerWithCardTracker(playerIndex, game) {
+) : Player(playerIndex, game) {
     override fun discard(): Int {
         return hand.indexOfMinOrNull { it.score } // discard the smallest score (ignoring traps and counteracts)
             ?: hand.indexOfFirstOrNull { it.isCounteract } // discard any counteracts
@@ -31,7 +31,7 @@ class BoomChickaBoomPlayer(
     override fun spy(): Int {
         // spy from the player with the highest known card
         return cardTracker.knownCards.maxKeyByOrNull { cards -> cards.maxByNullableOrNull { it.score } }
-            ?: game.activePlayers.filter { it.index != playerIndex }.random(random).index // spy a random player
+            ?: gameState.activePlayers.filter { it.index != playerIndex }.random(random).index // spy a random player
     }
 
     companion object : Factory {

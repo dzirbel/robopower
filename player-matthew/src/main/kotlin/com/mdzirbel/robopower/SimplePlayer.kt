@@ -2,7 +2,7 @@ package com.mdzirbel.robopower
 
 import com.dzirbel.robopower.DuelRound
 import com.dzirbel.robopower.Game
-import com.dzirbel.robopower.PlayerWithCardTracker
+import com.dzirbel.robopower.Player
 import com.dzirbel.robopower.util.indexOfFirstOrNull
 import com.dzirbel.robopower.util.indexOfMaxOrNull
 import com.dzirbel.robopower.util.indexOfMinOrNull
@@ -17,7 +17,7 @@ open class SimplePlayer(
     playerIndex: Int,
     game: Game,
     private val random: Random = Random.Default,
-) : PlayerWithCardTracker(playerIndex, game) {
+) : Player(playerIndex, game) {
     override fun discard(): Int {
         return hand.indexOfMinOrNull { it.score } // discard the smallest score (ignoring traps and counteracts)
             ?: hand.indexOfFirstOrNull { it.isCounteract } // discard any counteracts
@@ -34,7 +34,7 @@ open class SimplePlayer(
     override fun spy(): Int {
         // spy from the player with the highest known card
         return cardTracker.knownCards.maxKeyByOrNull { cards -> cards.maxByNullableOrNull { it.score } }
-            ?: game.activePlayers.filter { it.index != playerIndex }.random(random).index // spy a random player
+            ?: gameState.activePlayers.filter { it.index != playerIndex }.random(random).index // spy a random player
     }
 
     companion object : Factory {

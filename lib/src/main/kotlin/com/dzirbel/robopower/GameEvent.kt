@@ -1,16 +1,16 @@
 package com.dzirbel.robopower
 
 /**
- * Represents some public event in the game, and can be accessed via [Game.onEvent] or [Game.eventLog].
+ * Represents some public event in the game, and can be accessed via [Game.onEvent] or [GameState.eventLog].
  */
 sealed interface GameEvent {
     /**
-     * The [Game.turnCount] when this event was emitted.
+     * The [GameState.turnCount] when this event was emitted.
      */
     val turnCount: Int
 
     /**
-     * The [Game.upPlayer] when this event was emitted.
+     * The [GameState.upPlayer] when this event was emitted.
      */
     val upPlayerIndex: Int
 
@@ -18,15 +18,21 @@ sealed interface GameEvent {
      * Emitted when [upPlayerIndex] starts their turn, before they draw.
      */
     data class StartTurn(override val turnCount: Int, override val upPlayerIndex: Int) : GameEvent {
-        constructor(game: Game) : this(turnCount = game.turnCount, upPlayerIndex = game.upPlayerIndex)
+        constructor(gameState: GameState) : this(
+            turnCount = gameState.turnCount,
+            upPlayerIndex = gameState.upPlayerIndex,
+        )
     }
 
     /**
-     * Emitted when [upPlayerIndex] ends their turn, after the duel (but before [Game.upPlayer] is moved to the next
-     * player).
+     * Emitted when [upPlayerIndex] ends their turn, after the duel (but before [GameState.upPlayer] is moved to the
+     * next player).
      */
     data class EndTurn(override val turnCount: Int, override val upPlayerIndex: Int) : GameEvent {
-        constructor(game: Game) : this(turnCount = game.turnCount, upPlayerIndex = game.upPlayerIndex)
+        constructor(gameState: GameState) : this(
+            turnCount = gameState.turnCount,
+            upPlayerIndex = gameState.upPlayerIndex,
+        )
     }
 
     /**
@@ -38,9 +44,9 @@ sealed interface GameEvent {
         override val upPlayerIndex: Int,
         val eliminatedPlayerIndex: Int,
     ) : GameEvent {
-        constructor(game: Game, eliminatedPlayerIndex: Int) : this(
-            turnCount = game.turnCount,
-            upPlayerIndex = game.upPlayerIndex,
+        constructor(gameState: GameState, eliminatedPlayerIndex: Int) : this(
+            turnCount = gameState.turnCount,
+            upPlayerIndex = gameState.upPlayerIndex,
             eliminatedPlayerIndex = eliminatedPlayerIndex,
         )
     }
@@ -57,9 +63,9 @@ sealed interface GameEvent {
          */
         val previousDiscard: List<Card>,
     ) : GameEvent {
-        constructor(game: Game, previousDiscard: List<Card>) : this(
-            turnCount = game.turnCount,
-            upPlayerIndex = game.upPlayerIndex,
+        constructor(gameState: GameState, previousDiscard: List<Card>) : this(
+            turnCount = gameState.turnCount,
+            upPlayerIndex = gameState.upPlayerIndex,
             previousDiscard = previousDiscard,
         )
     }
@@ -69,7 +75,10 @@ sealed interface GameEvent {
      * duel).
      */
     data class PlayerDraw(override val turnCount: Int, override val upPlayerIndex: Int) : GameEvent {
-        constructor(game: Game) : this(turnCount = game.turnCount, upPlayerIndex = game.upPlayerIndex)
+        constructor(gameState: GameState) : this(
+            turnCount = gameState.turnCount,
+            upPlayerIndex = gameState.upPlayerIndex,
+        )
     }
 
     /**
@@ -81,9 +90,9 @@ sealed interface GameEvent {
         override val upPlayerIndex: Int,
         val discardedCard: Card,
     ) : GameEvent {
-        constructor(game: Game, discardedCard: Card) : this(
-            turnCount = game.turnCount,
-            upPlayerIndex = game.upPlayerIndex,
+        constructor(gameState: GameState, discardedCard: Card) : this(
+            turnCount = gameState.turnCount,
+            upPlayerIndex = gameState.upPlayerIndex,
             discardedCard = discardedCard,
         )
     }
@@ -101,9 +110,9 @@ sealed interface GameEvent {
             assert(upPlayerIndex != spiedPlayerIndex)
         }
 
-        constructor(game: Game, spied: Int, remainingCards: Int) : this(
-            turnCount = game.turnCount,
-            upPlayerIndex = game.upPlayerIndex,
+        constructor(gameState: GameState, spied: Int, remainingCards: Int) : this(
+            turnCount = gameState.turnCount,
+            upPlayerIndex = gameState.upPlayerIndex,
             spiedPlayerIndex = spied,
             remainingCards = remainingCards,
         )
@@ -117,9 +126,9 @@ sealed interface GameEvent {
         override val upPlayerIndex: Int,
         val result: DuelResult,
     ) : GameEvent {
-        constructor(game: Game, result: DuelResult) : this(
-            turnCount = game.turnCount,
-            upPlayerIndex = game.upPlayerIndex,
+        constructor(gameState: GameState, result: DuelResult) : this(
+            turnCount = gameState.turnCount,
+            upPlayerIndex = gameState.upPlayerIndex,
             result = result,
         )
     }
@@ -132,9 +141,9 @@ sealed interface GameEvent {
         override val upPlayerIndex: Int,
         val round: DuelRound,
     ) : GameEvent {
-        constructor(game: Game, round: DuelRound) : this(
-            turnCount = game.turnCount,
-            upPlayerIndex = game.upPlayerIndex,
+        constructor(gameState: GameState, round: DuelRound) : this(
+            turnCount = gameState.turnCount,
+            upPlayerIndex = gameState.upPlayerIndex,
             round = round,
         )
     }
