@@ -4,21 +4,11 @@ import com.dzirbel.robopower.util.indexOfFirstOrNull
 import com.dzirbel.robopower.util.maxByNullableOrNull
 import kotlin.random.Random
 
+/**
+ * Slight improvement over [SimplePlayer] which uses hardcoded heuristics of card score to determine its play.
+ */
 @Suppress("UnsafeCallOnNullableType", "ReturnCount", "UnnecessaryLet")
-class LessSimplePlayer(
-    playerIndex: Int,
-    game: Game,
-    random: Random = Random.Default,
-) : SimplePlayer(playerIndex, game, random) {
-    // TODO add to DuelResult
-    private val DuelResult.allCards: Map<Int, List<Card>>
-        get() = rounds.fold(mutableMapOf()) { acc, round ->
-            for ((playerIndex, card) in round.playedCards) {
-                acc.compute(playerIndex) { _, cards -> cards.orEmpty().plus(card) }
-            }
-            acc
-        }
-
+class LessSimplePlayer(playerState: PlayerState, random: Random = Random.Default) : SimplePlayer(playerState, random) {
     override fun discard(): Int {
         val spyIndex = hand.indexOfFirstOrNull { it.spyCount > 0 }
         if (spyIndex != null) {
@@ -72,6 +62,6 @@ class LessSimplePlayer(
     }
 
     companion object : Factory {
-        override fun create(playerIndex: Int, game: Game) = LessSimplePlayer(playerIndex, game)
+        override fun create(playerState: PlayerState) = LessSimplePlayer(playerState)
     }
 }

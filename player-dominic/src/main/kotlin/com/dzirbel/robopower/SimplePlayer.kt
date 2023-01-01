@@ -10,11 +10,7 @@ import kotlin.random.Random
 /**
  * Simple [Player] with very basic, hard-coded strategies. Beats [RandomPlayer] about 4:1.
  */
-open class SimplePlayer(
-    playerIndex: Int,
-    game: Game,
-    private val random: Random = Random.Default,
-) : Player(playerIndex, game) {
+open class SimplePlayer(playerState: PlayerState, private val random: Random = Random.Default) : Player(playerState) {
     override fun discard(): Int {
         return hand.indexOfMinOrNull { it.score } // discard the smallest score (ignoring traps and counteracts)
             ?: hand.indexOfFirstOrNull { it.isCounteract } // discard any counteracts
@@ -35,6 +31,6 @@ open class SimplePlayer(
     }
 
     companion object : Factory {
-        override fun create(playerIndex: Int, game: Game) = SimplePlayer(playerIndex, game)
+        override fun create(playerState: PlayerState) = SimplePlayer(playerState)
     }
 }

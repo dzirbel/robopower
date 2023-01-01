@@ -15,20 +15,14 @@ class Game(
     /**
      * The current state of the game; always the same object reference.
      */
-    val gameState = GameState(deck = deck, playerFactories = playerFactories, game = this)
+    val gameState: GameState = GameState(deck = deck, playerFactories = playerFactories)
 
     /**
      * The [PlayerState]s for each player; centralized in [Game] so that if there are multiple players for the same
      * index (for composite players which rely on multiple player instances), they all share the same state (and
      * [CardTracker], etc.).
      */
-    internal val playerStates: List<PlayerState> by lazy {
-        List(playerFactories.size) { playerIndex ->
-            PlayerState(playerIndex = playerIndex, gameState = gameState, game = this)
-        }
-    }
-
-    private val eventListeners: MutableList<(GameEvent) -> Unit> = mutableListOf()
+    private val playerStates: List<PlayerState> = gameState.playerStates
 
     private val playerCardSuppliers: Iterable<IndexedValue<Dueler.PlayerCardSupplier.FromPlayerAndDeck>> by lazy {
         gameState.players.map { player ->
@@ -36,7 +30,7 @@ class Game(
                 player = player,
                 deck = deck,
                 onDeckReshuffled = { previousDiscard ->
-                    emitEvent(GameEvent.DiscardPileReshuffledIntoDrawPile(gameState, previousDiscard))
+                    gameState.onEvent(GameEvent.DiscardPileReshuffledIntoDrawPile(gameState, previousDiscard))
                 },
             )
         }
@@ -48,22 +42,6 @@ class Game(
     init {
         require(playerFactories.size in MIN_PLAYERS..MAX_PLAYERS) {
             "player count must be between $MIN_PLAYERS and $MAX_PLAYERS; was ${playerFactories.size}"
-        }
-    }
-
-    /**
-     * Registers the [onEvent] callback to be invoked whenever a [GameEvent] occurs.
-     */
-    fun onEvent(onEvent: (GameEvent) -> Unit) {
-        eventListeners.add(onEvent)
-    }
-
-    /**
-     * A convenience wrapper around [onEvent] to add a listener to only events of type [E].
-     */
-    inline fun <reified E : GameEvent> onEventOfType(crossinline onEvent: (E) -> Unit) {
-        onEvent { event ->
-            if (event is E) { onEvent(event) }
         }
     }
 
@@ -89,14 +67,14 @@ class Game(
         while (maxRounds == null || gameState.turnCount < maxRounds) {
             gameState.turnCount++
 
-            emitEvent(GameEvent.StartTurn(gameState))
+            gameState.onEvent(GameEvent.StartTurn(gameState))
             gameState.assertGameInvariants()
 
             draw()
             discard()?.let { return it }
             duel()?.let { return it }
 
-            emitEvent(GameEvent.EndTurn(gameState))
+            gameState.onEvent(GameEvent.EndTurn(gameState))
             gameState.upPlayerIndex = gameState.nextPlayerIndex
         }
 
@@ -106,12 +84,12 @@ class Game(
     private fun draw() {
         val (card, previousDiscard) = gameState.deck.draw()
         if (previousDiscard != null) {
-            emitEvent(GameEvent.DiscardPileReshuffledIntoDrawPile(gameState, previousDiscard))
+            gameState.onEvent(GameEvent.DiscardPileReshuffledIntoDrawPile(gameState, previousDiscard))
         }
 
         gameState.upPlayer.draw(card)
 
-        emitEvent(GameEvent.PlayerDraw(gameState))
+        gameState.onEvent(GameEvent.PlayerDraw(gameState))
         gameState.assertGameInvariants()
     }
 
@@ -119,7 +97,7 @@ class Game(
         val card = gameState.upPlayer.doDiscard()
         gameState.deck.discard(card)
 
-        emitEvent(GameEvent.PlayerDiscard(gameState, card))
+        gameState.onEvent(GameEvent.PlayerDiscard(gameState, card))
         gameState.assertGameInvariants()
 
         repeat(card.spyCount) { _ ->
@@ -143,11 +121,15 @@ class Game(
         playerStates[gameState.upPlayerIndex].cardTracker
             .onReceiveSpyCard(card = spiedCard, fromPlayerIndex = spiedPlayerIndex)
 
-        emitEvent(GameEvent.Spied(gameState = gameState, spied = spiedPlayerIndex, remainingCards = remainingCards))
+        gameState.onEvent(
+            GameEvent.Spied(gameState = gameState, spied = spiedPlayerIndex, remainingCards = remainingCards),
+        )
 
         if (remainingCards == 0) {
             gameState.activePlayerCount--
-            emitEvent(GameEvent.PlayerEliminated(gameState = gameState, eliminatedPlayerIndex = spiedPlayerIndex))
+            gameState.onEvent(
+                GameEvent.PlayerEliminated(gameState = gameState, eliminatedPlayerIndex = spiedPlayerIndex),
+            )
 
             if (gameState.activePlayerCount == 1) {
                 return GameResult.Winner(game = this, winner = gameState.upPlayerIndex)
@@ -164,7 +146,7 @@ class Game(
         // run the duel
         val duelResult = Dueler.duel(
             players = playerCardSuppliers.filter { it.index in involvedPlayerIndices },
-            onRound = { emitEvent(GameEvent.AfterDuelRound(gameState = gameState, round = it)) },
+            onRound = { gameState.onEvent(GameEvent.AfterDuelRound(gameState = gameState, round = it)) },
         )
 
         // add any discarded cards (losing cards, traps, counteracts) to the discard pile
@@ -182,7 +164,7 @@ class Game(
             }
         }
 
-        emitEvent(GameEvent.Duel(gameState = gameState, result = duelResult))
+        gameState.onEvent(GameEvent.Duel(gameState = gameState, result = duelResult))
 
         // check which players if any have been eliminated by this duel
         val remainingPlayerIndices = buildSet {
@@ -191,7 +173,9 @@ class Game(
         return if (remainingPlayerIndices.size < involvedPlayerIndices.size) {
             val eliminatedPlayers = involvedPlayerIndices.minus(remainingPlayerIndices)
             for (eliminatedPlayer in eliminatedPlayers) {
-                emitEvent(GameEvent.PlayerEliminated(gameState = gameState, eliminatedPlayerIndex = eliminatedPlayer))
+                gameState.onEvent(
+                    GameEvent.PlayerEliminated(gameState = gameState, eliminatedPlayerIndex = eliminatedPlayer),
+                )
             }
             gameState.activePlayerCount -= eliminatedPlayers.size
 
@@ -205,11 +189,6 @@ class Game(
             null
         }
             .also { gameState.assertGameInvariants(afterDuel = true) }
-    }
-
-    private fun emitEvent(event: GameEvent) {
-        gameState.addEvent(event)
-        eventListeners.forEach { it(event) }
     }
 
     companion object {

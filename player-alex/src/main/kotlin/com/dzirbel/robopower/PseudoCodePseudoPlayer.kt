@@ -10,18 +10,9 @@ import kotlin.random.Random
  * Player originally written as psuedo-code by Alex.
  */
 class PseudoCodePseudoPlayer(
-    playerIndex: Int,
-    game: Game,
+    playerState: PlayerState,
     private val random: Random = Random.Default,
-) : Player(playerIndex, game) {
-    private val DuelResult.allCards: Map<Int, List<Card>>
-        get() = rounds.fold(mutableMapOf()) { acc, round ->
-            for ((playerIndex, card) in round.playedCards) {
-                acc.compute(playerIndex) { _, cards -> cards.orEmpty().plus(card) }
-            }
-            acc
-        }
-
+) : Player(playerState) {
     override fun discard(): Int {
         // if (has SpyMaster && another player has <= 2 cards): play SpyMaster
         // if (has SpyMaster && we have <= 4 cards): play SpyMaster
@@ -119,6 +110,6 @@ class PseudoCodePseudoPlayer(
     }
 
     companion object : Factory {
-        override fun create(playerIndex: Int, game: Game) = PseudoCodePseudoPlayer(playerIndex, game)
+        override fun create(playerState: PlayerState) = PseudoCodePseudoPlayer(playerState)
     }
 }

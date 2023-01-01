@@ -1,9 +1,9 @@
 package com.mdzirbel.robopower
 
 import com.dzirbel.robopower.DuelRound
-import com.dzirbel.robopower.Game
 import com.dzirbel.robopower.GameEvent
 import com.dzirbel.robopower.Player
+import com.dzirbel.robopower.PlayerState
 import com.dzirbel.robopower.util.indexOfFirstOrNull
 import com.dzirbel.robopower.util.indexOfMaxOrNull
 import com.dzirbel.robopower.util.indexOfMinOrNull
@@ -32,16 +32,15 @@ class PlayerKnowledge(
  * The best player with the best strategies. Beats Dominic's strategies by a lot
  */
 class MatthewPlayer(
-    playerIndex: Int,
-    game: Game,
+    playerState: PlayerState,
     private val random: Random = Random.Default,
-) : Player(playerIndex, game) {
+) : Player(playerState) {
 
     private var lastDuel: GameEvent.Duel? = null
 
     init {
         // on duel, update known cards with all the results
-        game.onEventOfType<GameEvent.Duel> { event ->
+        gameState.onEventOfType<GameEvent.Duel> { event ->
             lastDuel = event
         }
     }
@@ -135,6 +134,6 @@ class MatthewPlayer(
     }
 
     companion object : Factory {
-        override fun create(playerIndex: Int, game: Game) = MatthewPlayer(playerIndex, game)
+        override fun create(playerState: PlayerState) = MatthewPlayer(playerState)
     }
 }

@@ -5,11 +5,27 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 class PlayerTest {
-    private val game = Game(playerFactories = listOf(InOrderPlayer, InOrderPlayer))
+    private val playerState = PlayerState(playerIndex = 0, GameState(playerFactories = listOf()))
+
+    @Test
+    fun `roundsUntilUp is accurate`() {
+        val gameState = GameState(playerFactories = listOf(InOrderPlayer, InOrderPlayer, InOrderPlayer, InOrderPlayer))
+        gameState.upPlayerIndex = 1
+
+        gameState.playerStates[0]._hand.add(Card.BUZZY)
+        gameState.playerStates[1]._hand.add(Card.BUZZY)
+        gameState.playerStates[3]._hand.add(Card.BUZZY)
+
+        assertEquals(0, gameState.players[1].roundsUntilUp)
+        assertEquals(1, gameState.players[3].roundsUntilUp)
+        assertEquals(2, gameState.players[0].roundsUntilUp)
+
+        assertThrows<IllegalStateException> { gameState.players[2].roundsUntilUp }
+    }
 
     @Test
     fun `invalid index choices are caught`() {
-        val invalidChoicePlayer = object : Player(playerIndex = 0, game = game) {
+        val invalidChoicePlayer = object : Player(playerState = playerState) {
             override fun discard() = -1
             override fun spy() = -1
             override fun duel(involvedPlayers: Set<Int>, previousRounds: List<DuelRound>) = -1
@@ -28,7 +44,7 @@ class PlayerTest {
 
     @Test
     fun `thrown exceptions are wrapped`() {
-        val exceptionThrowingPlayer = object : Player(playerIndex = 0, game = game) {
+        val exceptionThrowingPlayer = object : Player(playerState = playerState) {
             override fun discard() = throw AssertionError(1)
             override fun spy() = throw AssertionError(2)
             override fun duel(involvedPlayers: Set<Int>, previousRounds: List<DuelRound>) = throw AssertionError(3)
@@ -75,7 +91,7 @@ class PlayerTest {
     @Test
     fun `dueling cards are re-added to the hand at the end`() {
         val dueledCards = mutableListOf(1, 4, 2)
-        val player = object : Player(playerIndex = 0, game = game) {
+        val player = object : Player(playerState = playerState) {
             override fun discard() = 0
             override fun spy() = 0
             override fun duel(involvedPlayers: Set<Int>, previousRounds: List<DuelRound>) = dueledCards.removeFirst()

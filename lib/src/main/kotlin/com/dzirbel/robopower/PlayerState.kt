@@ -5,7 +5,7 @@ package com.dzirbel.robopower
  * as the player's [hand] and a [cardTracker].
  */
 @Suppress("UseDataClass")
-class PlayerState internal constructor(
+class PlayerState(
     /**
      * The index in [GameState.players] of the player whose point of view is being captured.
      */
@@ -17,20 +17,20 @@ class PlayerState internal constructor(
      */
     val gameState: GameState,
 
-    game: Game,
+    hand: List<Card> = emptyList(),
 ) {
     /**
      * A [CardTracker] which does bookkeeping on known cards in other players' hands.
      */
     val cardTracker: CardTracker = CardTracker(
-        game = game,
+        gameState = gameState,
         deck = gameState.deck,
         trackingPlayerIndex = playerIndex,
         getHand = { _hand },
     )
 
     @Suppress("VariableNaming") // TODO refactor to make private
-    internal val _hand: MutableList<Card> = mutableListOf()
+    internal val _hand: MutableList<Card> = hand.toMutableList()
 
     /**
      * The current [Card]s in this [Player]'s hand.
@@ -41,20 +41,4 @@ class PlayerState internal constructor(
      */
     val hand: List<Card>
         get() = _hand.toList()
-
-    // TODO document and test
-    val roundsUntilUp: Int
-        get() {
-            require(_hand.isNotEmpty())
-
-            var rounds = 0
-            var currentPlayerIndex = gameState.upPlayerIndex
-
-            while (currentPlayerIndex != playerIndex) {
-                currentPlayerIndex = (currentPlayerIndex + 1) % gameState.playerCount
-                if (gameState.players[currentPlayerIndex].isActive) rounds++
-            }
-
-            return rounds
-        }
 }

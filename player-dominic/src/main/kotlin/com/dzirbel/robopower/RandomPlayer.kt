@@ -5,11 +5,7 @@ import kotlin.random.Random
 /**
  * Trivial [Player] which uses [random] to make all of its choices uniformly randomly.
  */
-class RandomPlayer(
-    playerIndex: Int,
-    game: Game,
-    private val random: Random = Random.Default,
-) : Player(playerIndex, game) {
+class RandomPlayer(playerState: PlayerState, private val random: Random = Random.Default) : Player(playerState) {
 
     override fun discard() = random.nextInt(until = hand.size)
 
@@ -18,6 +14,6 @@ class RandomPlayer(
     override fun spy() = gameState.activePlayers.filter { it.index != playerIndex }.random(random).index
 
     companion object : Factory {
-        override fun create(playerIndex: Int, game: Game) = RandomPlayer(playerIndex, game)
+        override fun create(playerState: PlayerState) = RandomPlayer(playerState)
     }
 }

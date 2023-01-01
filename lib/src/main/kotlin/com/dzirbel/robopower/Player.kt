@@ -17,7 +17,7 @@ import kotlin.time.TimeSource
  *
  * TODO update docs with strategies
  */
-abstract class Player(val playerIndex: Int, game: Game) : DiscardStrategy, SpyStrategy, DuelStrategy {
+abstract class Player(val playerState: PlayerState) : DiscardStrategy, SpyStrategy, DuelStrategy {
     /**
      * Factory wrapper to create a player; this essentially allows a convenient reference to the player constructor or
      * to pass in some easily-configurable parameters.
@@ -51,7 +51,7 @@ abstract class Player(val playerIndex: Int, game: Game) : DiscardStrategy, SpySt
         /**
          * Creates a new [Player] for a new [game] at the given [playerIndex].
          */
-        fun create(playerIndex: Int, game: Game): Player
+        fun create(playerState: PlayerState): Player
 
         // TODO document
         fun withStrategies(
@@ -59,11 +59,10 @@ abstract class Player(val playerIndex: Int, game: Game) : DiscardStrategy, SpySt
             spyStrategy: OptionalSpyStrategy? = null,
             duelStrategy: OptionalDuelStrategy? = null,
         ): Factory {
-            return Factory { playerIndex, game ->
-                val original = create(playerIndex, game)
+            return Factory { playerState ->
+                val original = create(playerState)
                 CompositePlayer(
-                    playerIndex = playerIndex,
-                    game = game,
+                    playerState = playerState,
                     discardStrategy = discardStrategy?.let {
                         DiscardStrategy { playerState ->
                             discardStrategy.discard(playerState) ?: original.discard()
@@ -88,6 +87,12 @@ abstract class Player(val playerIndex: Int, game: Game) : DiscardStrategy, SpySt
         }
     }
 
+    val playerIndex: Int
+        get() = playerState.playerIndex
+
+    val gameState: GameState
+        get() = playerState.gameState
+
     /**
      * Counts of cards in play during a duel so that [isActive] and [handSize] can still be accurate.
      */
@@ -102,14 +107,30 @@ abstract class Player(val playerIndex: Int, game: Game) : DiscardStrategy, SpySt
         get() = cardsInPlay > 0 || playerState._hand.isNotEmpty()
 
     /**
+     * Number of game rounds until this player's turn; 0 if it is currently this player's turn.
+     *
+     * Throws [IllegalStateException] if this player has no cards in their hand.
+     */
+    val roundsUntilUp: Int
+        get() {
+            check(isActive)
+
+            var rounds = 0
+            var currentPlayerIndex = gameState.upPlayerIndex
+
+            while (currentPlayerIndex != playerIndex) {
+                currentPlayerIndex = (currentPlayerIndex + 1) % gameState.playerCount
+                if (gameState.players[currentPlayerIndex].isActive) rounds++
+            }
+
+            return rounds
+        }
+
+    /**
      * Tracks the total time spent in implementation logic.
      */
     var totalPlayerLogicTime: Duration = Duration.ZERO
         private set
-
-    val gameState: GameState = game.gameState
-
-    protected val playerState: PlayerState by lazy { game.playerStates[playerIndex] }
 
     protected val cardTracker: CardTracker
         get() = playerState.cardTracker

@@ -1,7 +1,6 @@
 plugins {
     kotlin("jvm") version libs.versions.kotlin
     alias(libs.plugins.detekt)
-    application
 }
 
 dependencies {
@@ -11,6 +10,8 @@ dependencies {
     implementation(project(":player-matthew"))
 }
 
-application {
+tasks.register<JavaExec>("run") {
+    classpath = sourceSets.main.get().runtimeClasspath
     mainClass.set("com.dzirbel.robopower.MainKt")
+    workingDir = rootProject.projectDir
 }

@@ -10,14 +10,19 @@ package com.dzirbel.robopower
  * [players] that cannot be immutable.
  */
 class GameState(
+    playerFactories: List<Player.Factory>,
+
     /**
      * The [Deck] used to draw and discard cards; may be used to access the discard pile or size of draw pile.
      */
-    val deck: Deck,
-
-    playerFactories: List<Player.Factory>,
-    game: Game,
+    val deck: Deck = Deck(),
 ) {
+    internal val playerStates: List<PlayerState> by lazy {
+        List(playerFactories.size) { playerIndex ->
+            PlayerState(playerIndex = playerIndex, gameState = this)
+        }
+    }
+
     /**
      * The [Player]s in the game, in the official order (i.e. player indexes are computed relative to this list).
      *
@@ -26,9 +31,9 @@ class GameState(
      * Note that this contains all players, even those who have been eliminated (i.e. have no cards left); use
      * [activePlayers] to get only the players still in the game.
      */
-    val players by lazy {
+    val players: List<Player> by lazy {
         playerFactories.mapIndexed { playerIndex, factory ->
-            val player = factory.create(playerIndex, game)
+            val player = factory.create(playerStates[playerIndex])
             if (player.playerIndex != playerIndex) {
                 throw PlayerThrownException(player, AssertionError("playerIndex has been tampered with"))
             }
@@ -97,8 +102,27 @@ class GameState(
 
     private val _eventLog: MutableList<GameEvent> = mutableListOf()
 
-    internal fun addEvent(event: GameEvent) {
+    private val eventListeners: MutableList<(GameEvent) -> Unit> = mutableListOf()
+
+    /**
+     * Registers the [onEvent] callback to be invoked whenever a [GameEvent] occurs.
+     */
+    fun onEvent(onEvent: (GameEvent) -> Unit) {
+        eventListeners.add(onEvent)
+    }
+
+    /**
+     * A convenience wrapper around [onEvent] to add a listener to only events of type [E].
+     */
+    inline fun <reified E : GameEvent> onEventOfType(crossinline onEvent: (E) -> Unit) {
+        onEvent { event ->
+            if (event is E) { onEvent(event) }
+        }
+    }
+
+    internal fun onEvent(event: GameEvent) {
         _eventLog.add(event)
+        eventListeners.forEach { it(event) }
     }
 
     internal fun assertGameInvariants(afterDuel: Boolean = false) {

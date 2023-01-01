@@ -35,6 +35,20 @@ data class DuelResult(
      */
     val drawnCards: Map<Int, List<Card>> = emptyMap(),
 ) {
+    /**
+     * All the cards played in this duel, as a map from player index to the cards they played.
+     */
+    val allCards: Map<Int, List<Card>>
+        get() {
+            val cards = mutableMapOf<Int, MutableList<Card>>()
+            for (round in rounds) {
+                for ((playerIndex, card) in round.playedCards) {
+                    cards.computeIfAbsent(playerIndex) { mutableListOf() }.add(card)
+                }
+            }
+            return cards
+        }
+
     init {
         assertLazy { rounds.isNotEmpty() }
         assertLazy { rounds.last().result !is DuelRoundResult.DoubleDuel }
@@ -70,6 +84,30 @@ data class DuelRound(
         assert(playedCards.size >= 2)
     }
 }
+
+/**
+ * Computes the set of cards currently in play (as a mapping from the player index who originally played them to the
+ * cards they played) for this sequence of [DuelRound]s, all of which must have [DuelRoundResult.DoubleDuel] as their
+ * [DuelRound.result].
+ *
+ * TODO unit test
+ */
+val List<DuelRound>.cardsInPlay: Map<Int, List<Card>>
+    get() {
+        var trapping = false
+        val cardsInPlay = mutableMapOf<Int, MutableList<Card>>()
+        for (round in reversed()) {
+            val result = round.result
+            require(result is DuelRoundResult.DoubleDuel) { "past rounds must all be double duels" }
+
+            trapping = trapping || result.trapping
+            val involvedCards = if (trapping) round.playedCards else result.doubleDuelers
+            for ((playerIndex, card) in involvedCards) {
+                cardsInPlay.computeIfAbsent(playerIndex) { mutableListOf() }.add(card)
+            }
+        }
+        return cardsInPlay
+    }
 
 /**
  * Enumerates the possible outcomes for a round of dueling.

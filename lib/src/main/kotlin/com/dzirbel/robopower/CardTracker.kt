@@ -10,7 +10,7 @@ import com.dzirbel.robopower.util.MultiSet
  *  the hand of the player who stole it (but currently is not)
  */
 class CardTracker(
-    game: Game,
+    gameState: GameState,
     private val deck: Deck,
     private val trackingPlayerIndex: Int,
     private val getHand: () -> List<Card>,
@@ -22,7 +22,7 @@ class CardTracker(
     val knownCards: Map<Int, List<Card>>
         get() = _knownCards.toMap()
 
-    private val _knownCards: MutableMap<Int, MutableList<Card>> = List(game.gameState.playerCount) { it }
+    private val _knownCards: MutableMap<Int, MutableList<Card>> = List(gameState.playerCount) { it }
         .minus(trackingPlayerIndex)
         .associateWith { mutableListOf<Card>() }
         .toMutableMap()
@@ -31,7 +31,7 @@ class CardTracker(
 
     init {
         // on discard, remove one copy of the discarded card from the known cards
-        game.onEventOfType<GameEvent.PlayerDiscard> { event ->
+        gameState.onEventOfType<GameEvent.PlayerDiscard> { event ->
             if (event.upPlayerIndex != trackingPlayerIndex) {
                 _knownCards.getValue(event.upPlayerIndex).remove(event.discardedCard)
                 unknownCards = null
@@ -39,7 +39,7 @@ class CardTracker(
         }
 
         // on duel, update known cards with all the results
-        game.onEventOfType<GameEvent.Duel> { event ->
+        gameState.onEventOfType<GameEvent.Duel> { event ->
             val result = event.result
 
             for ((player, discarded) in result.discardedCards) {
@@ -92,7 +92,7 @@ class CardTracker(
 
         // TODO for spy master, if they spy two cards from a player with only two cards then we can know what they are
         //  (currently only deduces this for the second card)
-        game.onEventOfType<GameEvent.Spied> { event ->
+        gameState.onEventOfType<GameEvent.Spied> { event ->
             // ignore spies from or to the tracking player since they will be accounted for via onReceiveSpyCard and
             // onCardStolen instead
             if (event.upPlayerIndex != trackingPlayerIndex && event.spiedPlayerIndex != trackingPlayerIndex) {
@@ -113,8 +113,8 @@ class CardTracker(
 
         // if the discard pile is reshuffled in a one-on-one, we know exactly the cards held by the other player
         // TODO also true if there are e.g. 3 players and we know all the cards held by one of them
-        game.onEventOfType<GameEvent.DiscardPileReshuffledIntoDrawPile> { event ->
-            val active = game.gameState.activePlayers.filter { it.index != trackingPlayerIndex }
+        gameState.onEventOfType<GameEvent.DiscardPileReshuffledIntoDrawPile> { event ->
+            val active = gameState.activePlayers.filter { it.index != trackingPlayerIndex }
             if (active.size == 1) {
                 val activePlayer = active.first().index
                 _knownCards[activePlayer] = Card.deck.toMutableList().apply {

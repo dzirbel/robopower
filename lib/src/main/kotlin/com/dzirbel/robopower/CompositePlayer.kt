@@ -6,12 +6,11 @@ import com.dzirbel.robopower.util.mapToFirstOrNull
  * A [Player] which delegates to the given [discardStrategy], [spyStrategy], and [duelStrategy] to make its decisions.
  */
 class CompositePlayer(
-    playerIndex: Int,
-    game: Game,
+    playerState: PlayerState,
     private val discardStrategy: DiscardStrategy,
     private val spyStrategy: SpyStrategy,
     private val duelStrategy: DuelStrategy,
-) : Player(playerIndex, game) {
+) : Player(playerState) {
 
     override fun discard() = discardStrategy.discard(playerState)
 
@@ -26,19 +25,18 @@ class CompositePlayer(
     }
 
     private class Factory(
-        private val discardStrategy: (playerIndex: Int, game: Game) -> DiscardStrategy,
-        private val spyStrategy: (playerIndex: Int, game: Game) -> SpyStrategy,
-        private val duelStrategy: (playerIndex: Int, game: Game) -> DuelStrategy,
+        private val discardStrategy: (playerState: PlayerState) -> DiscardStrategy,
+        private val spyStrategy: (playerState: PlayerState) -> SpyStrategy,
+        private val duelStrategy: (playerState: PlayerState) -> DuelStrategy,
     ) : Player.Factory {
         override fun playerName(playerIndex: Int) = "Composite"
 
-        override fun create(playerIndex: Int, game: Game): Player {
+        override fun create(playerState: PlayerState): Player {
             return CompositePlayer(
-                playerIndex = playerIndex,
-                game = game,
-                discardStrategy = discardStrategy(playerIndex, game),
-                spyStrategy = spyStrategy(playerIndex, game),
-                duelStrategy = duelStrategy(playerIndex, game),
+                playerState = playerState,
+                discardStrategy = discardStrategy(playerState),
+                spyStrategy = spyStrategy(playerState),
+                duelStrategy = duelStrategy(playerState),
             )
         }
     }
@@ -68,9 +66,9 @@ class CompositePlayer(
             duelStrategy: DuelStrategy,
         ): Player.Factory {
             return Factory(
-                discardStrategy = { _, _ -> discardStrategy },
-                spyStrategy = { _, _ -> spyStrategy },
-                duelStrategy = { _, _ -> duelStrategy },
+                discardStrategy = { _ -> discardStrategy },
+                spyStrategy = { _ -> spyStrategy },
+                duelStrategy = { _ -> duelStrategy },
             )
         }
 
@@ -84,19 +82,19 @@ class CompositePlayer(
             duelStrategies: List<OptionalDuelStrategy>,
         ): Player.Factory {
             return Factory(
-                discardStrategy = { _, _ ->
+                discardStrategy = { _ ->
                     DiscardStrategy { playerState ->
                         discardStrategies.mapToFirstOrNull { it.discard(playerState) }
                             ?: error("no discard strategy provided a result")
                     }
                 },
-                spyStrategy = { _, _ ->
+                spyStrategy = { _ ->
                     SpyStrategy { playerState ->
                         spyStrategies.mapToFirstOrNull { it.spy(playerState) }
                             ?: error("no spy strategy provided a result")
                     }
                 },
-                duelStrategy = { _, _ ->
+                duelStrategy = { _ ->
                     DuelStrategy { playerState, involvedPlayers, previousRounds ->
                         duelStrategies.mapToFirstOrNull { it.duel(playerState, involvedPlayers, previousRounds) }
                             ?: error("no duel strategy provided a result")

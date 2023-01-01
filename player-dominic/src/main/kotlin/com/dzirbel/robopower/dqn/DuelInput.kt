@@ -5,18 +5,20 @@ import com.dzirbel.robopower.DuelRound
 import com.dzirbel.robopower.Game
 import com.dzirbel.robopower.GameEvent
 import com.dzirbel.robopower.PlayerState
+import com.dzirbel.robopower.cardsInPlay
 import org.jetbrains.kotlinx.dl.api.core.layer.core.Input
 
 private const val NUM_DUELS_INCLUDED_IN_INPUT = 5
-val DUEL_BUFFER_SIZE = Card.values().size.let { cards ->
+
+internal val duelBufferSize = Card.values().size.let { cards ->
     6 + cards + (Game.MAX_PLAYERS - 1) * (cards + 1) + cards + NUM_DUELS_INCLUDED_IN_INPUT * cards
 }
 
-val DuelInput = Input(DUEL_BUFFER_SIZE.toLong(), name = "duel input")
+val DuelInput = Input(duelBufferSize.toLong(), name = "duel input")
 
 fun PlayerState.toDuelInput(playedCard: Card, involvedPlayers: Set<Int>, previousRounds: List<DuelRound>): FloatArray {
     val cards = Card.values()
-    return buildFloatArray(DUEL_BUFFER_SIZE) {
+    return buildFloatArray(duelBufferSize) {
         // card played in the duel; note that this is not part of the game state but corresponds to the "action"
         // dimension in Q-learning
         add(playedCard.ordinal)
@@ -28,7 +30,7 @@ fun PlayerState.toDuelInput(playedCard: Card, involvedPlayers: Set<Int>, previou
         add(involvedPlayers.size)
 
         // number of turns until this player is up
-        add(roundsUntilUp)
+        add(gameState.players[playerIndex].roundsUntilUp)
 
         // sizes of draw and discard piles (an approximation of the cards in the discard pile)
         add(gameState.deck.drawPileSize)
@@ -55,10 +57,9 @@ fun PlayerState.toDuelInput(playedCard: Card, involvedPlayers: Set<Int>, previou
         }
 
         // cards currently involved in this duel; an approximation of the duel state
+        val cardsInPlay = previousRounds.cardsInPlay.flatMap { it.value }
         for (card in cards) {
-            // TODO not correct, does not remove cards which have already been retained
-            val count = previousRounds.sumOf { round -> round.playedCards.count { it.value == card } }
-            add(count)
+            add(cardsInPlay.count { it == card })
         }
 
         // cards played in the last N duels
