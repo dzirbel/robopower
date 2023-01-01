@@ -14,7 +14,7 @@ import org.jetbrains.kotlinx.dl.dataset.OnHeapDataset
 import java.io.File
 
 private const val PLAYERS = 4
-private const val BATCH_SIZE = 50
+private const val BATCH_SIZE = 5
 private const val BATCHES = 100
 
 private const val WIN_REWARD = 5
@@ -63,7 +63,7 @@ fun main() {
                         is GameResult.Tied -> if (playerIndex in result.tiedPlayers) TIE_REWARD else 0
                     }
 
-                    val states = strategies[playerIndex].states
+                    val states = requireNotNull(strategies[playerIndex].states)
                     choices.add(states to reward)
                 }
             }

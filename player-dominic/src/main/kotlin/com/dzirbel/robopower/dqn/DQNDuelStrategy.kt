@@ -4,33 +4,16 @@ import com.dzirbel.robopower.Card
 import com.dzirbel.robopower.DuelRound
 import com.dzirbel.robopower.DuelStrategy
 import com.dzirbel.robopower.PlayerState
-import org.jetbrains.kotlinx.dl.api.core.layer.core.Input
 import org.jetbrains.kotlinx.dl.api.inference.InferenceModel
 import org.jetbrains.kotlinx.dl.api.inference.TensorFlowInferenceModel
 import java.io.File
 
-val DuelInput = Input(
-    (1 + 1 + Card.values().size).toLong(),
-    name = "duel input",
-)
-
-// TODO also include duel state in the input
-fun PlayerState.toInput(card: Card): FloatArray {
-    return buildList {
-        add(card.ordinal.toFloat())
-
-        add(gameState.activePlayerCount.toFloat())
-
-        addAll(Card.values().map { card -> hand.count { it == card }.toFloat() })
-    }.toFloatArray()
-}
-
 class DQNDuelStrategy internal constructor(
     private val model: InferenceModel,
-    private val training: Boolean,
+    training: Boolean,
 ) : DuelStrategy {
-    private val _states = mutableListOf<FloatArray>()
-    val states: List<FloatArray>
+    private val _states: MutableList<FloatArray>? = if (training) mutableListOf() else null
+    val states: List<FloatArray>?
         get() = _states
 
     constructor(modelFilename: String) : this(
@@ -49,7 +32,13 @@ class DQNDuelStrategy internal constructor(
         var finalInput: FloatArray? = null
 
         for (card in playerState.hand.toSet()) {
-            val input = playerState.toInput(card = card)
+            // TODO build base input array once and then copy and modify for each card choice?
+            val input = playerState.toDuelInput(
+                playedCard = card,
+                involvedPlayers = involvedPlayers,
+                previousRounds = previousRounds,
+            )
+
             val prediction = model.predictSoftly(input)[0]
 
             if (maxPrediction == null || prediction > maxPrediction) {
@@ -59,9 +48,7 @@ class DQNDuelStrategy internal constructor(
             }
         }
 
-        if (training) {
-            _states.add(requireNotNull(finalInput))
-        }
+        _states?.add(requireNotNull(finalInput))
 
         return playerState.hand.indexOf(requireNotNull(bestCard))
     }
