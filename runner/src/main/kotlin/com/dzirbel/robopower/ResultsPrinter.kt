@@ -41,7 +41,7 @@ object ResultsPrinter {
                     "$ties ties (${results.percentOfGames(ties)})",
             )
 
-            val timePerGame = results.playerLogicTime.getValue(playerIndex) / results.successfulGames
+            val timePerGame = results.playerLogicTime[playerIndex]?.let { it / results.successfulGames }
             println("  > Time spent per game: $timePerGame")
 
             val invalidChoices = results.playerChoiceExceptions.count(playerIndex)

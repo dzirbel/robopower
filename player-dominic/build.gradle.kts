@@ -5,4 +5,7 @@ plugins {
 
 dependencies {
     api(project(":lib"))
+
+    implementation(libs.kotlindl.api)
+    implementation(libs.kotlindl.tensorflow)
 }

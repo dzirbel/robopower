@@ -3,6 +3,7 @@ coroutines = "1.6.4"
 detekt = "1.22.0" # https://github.com/detekt/detekt
 junit = "5.8.1"
 kotlin = "1.7.21"
+kotlindl = "0.5.0"
 
 [libraries]
 coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -10,6 +11,8 @@ detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", 
 junit-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
 junit-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
+kotlindl-api = { module = "org.jetbrains.kotlinx:kotlin-deeplearning-api", version.ref = "kotlindl" }
+kotlindl-tensorflow = { module = "org.jetbrains.kotlinx:kotlin-deeplearning-tensorflow", version.ref = "kotlindl" }
 
 [plugins]
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
