@@ -71,6 +71,8 @@ class Game(
      * Runs the game to its conclusion, returning a [GameResult] with the final result.
      *
      * This function may only be called once.
+     *
+     * TODO separate function for partial runs which is nullable; this one can be non-null
      */
     fun run(maxRounds: Int? = null): GameResult? {
         require(!started.getAndSet(true)) { "game is already running" }

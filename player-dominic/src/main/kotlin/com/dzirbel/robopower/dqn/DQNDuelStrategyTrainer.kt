@@ -13,18 +13,24 @@ import org.jetbrains.kotlinx.dl.api.core.optimizer.Adam
 import org.jetbrains.kotlinx.dl.dataset.OnHeapDataset
 import java.io.File
 
-private const val BATCH_SIZE = 10
-private const val BATCHES = 10
 private const val PLAYERS = 4
+private const val BATCH_SIZE = 50
+private const val BATCHES = 100
 
+private const val WIN_REWARD = 5
+private const val TIE_REWARD = 2
+
+private val modelLayers: Sequential = Sequential.of(
+    DuelInput,
+    Flatten(),
+    Dense(300),
+    Dense(100),
+    Dense(10),
+)
+
+@Suppress("MagicNumber")
 fun main() {
-    Sequential.of(
-        DuelInput,
-        Flatten(),
-        Dense(300),
-        Dense(100),
-        Dense(10),
-    ).use { model ->
+    modelLayers.use { model ->
         model.compile(
             optimizer = Adam(learningRate = 0.00025f),
             loss = Losses.SOFT_MAX_CROSS_ENTROPY_WITH_LOGITS,
@@ -33,6 +39,8 @@ fun main() {
 
         model.init()
 
+        // TODO is this necessary every time?
+        @Suppress("SpreadOperator")
         model.reshape(*DuelInput.packedDims)
 
         println("Compiled model")
@@ -42,18 +50,17 @@ fun main() {
 
             val choices = mutableListOf<Pair<List<FloatArray>, Int>>()
 
-            repeat(BATCH_SIZE) { gameIndex ->
-                println("  Game ${gameIndex + 1} / $BATCH_SIZE")
-
+            repeat(BATCH_SIZE) {
                 val strategies = List(PLAYERS) { DQNDuelStrategy(model = model, training = true) }
 
                 val game = Game(strategies.map { SimplePlayer.withStrategies(duelStrategy = it) })
                 val result = requireNotNull(game.run())
 
                 repeat(PLAYERS) { playerIndex ->
+                    // TODO gradual rewards for placing second, etc
                     val reward = when (result) {
-                        is GameResult.Winner -> if (result.winner == playerIndex) 5 else 0
-                        is GameResult.Tied -> if (playerIndex in result.tiedPlayers) 2 else 0
+                        is GameResult.Winner -> if (result.winner == playerIndex) WIN_REWARD else 0
+                        is GameResult.Tied -> if (playerIndex in result.tiedPlayers) TIE_REWARD else 0
                     }
 
                     val states = strategies[playerIndex].states
@@ -66,13 +73,8 @@ fun main() {
                 labels = choices.flatMap { (inputs, reward) -> List(inputs.size) { reward.toFloat() } }.toFloatArray(),
             )
 
-            println("Fitting to model")
-
-            model.fit(
-                dataset = dataset,
-                epochs = 10,
-                batchSize = 10,
-            )
+            // TODO reconsider fitting params
+            model.fit(dataset = dataset, epochs = 10, batchSize = 10)
         }
 
         // TODO add date etc to filename

@@ -29,18 +29,18 @@ class DQNDuelStrategy internal constructor(
     private val model: InferenceModel,
     private val training: Boolean,
 ) : DuelStrategy {
+    private val _states = mutableListOf<FloatArray>()
+    val states: List<FloatArray>
+        get() = _states
+
     constructor(modelFilename: String) : this(
         // TODO model is never closed
         model = TensorFlowInferenceModel.load(File(modelFilename)).also {
+            @Suppress("SpreadOperator")
             it.reshape(*DuelInput.packedDims)
         },
         training = false,
     )
-
-    // private val predictions = mutableListOf<Pair<FloatArray, Int>>()
-    private val _states = mutableListOf<FloatArray>()
-    val states: List<FloatArray>
-        get() = _states
 
     override fun duel(playerState: PlayerState, involvedPlayers: Set<Int>, previousRounds: List<DuelRound>): Int {
         // TODO names
