@@ -50,7 +50,7 @@ fun main() {
 
             val choices = mutableListOf<Pair<List<FloatArray>, Int>>()
 
-            repeat(BATCH_SIZE) {
+            repeat(BATCH_SIZE) { _ ->
                 val strategies = List(PLAYERS) { DQNDuelStrategy(model = model, training = true) }
 
                 val game = Game(strategies.map { SimplePlayer.withStrategies(duelStrategy = it) })
