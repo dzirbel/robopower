@@ -16,10 +16,16 @@ class GameState(
      * The [Deck] used to draw and discard cards; may be used to access the discard pile or size of draw pile.
      */
     val deck: Deck = Deck(),
+
+    private val startingHands: List<List<Card>>? = null,
 ) {
     internal val playerStates: List<PlayerState> by lazy {
         List(playerFactories.size) { playerIndex ->
-            PlayerState(playerIndex = playerIndex, gameState = this)
+            PlayerState(
+                playerIndex = playerIndex,
+                gameState = this,
+                hand = startingHands?.getOrNull(playerIndex).orEmpty(),
+            )
         }
     }
 
@@ -116,7 +122,9 @@ class GameState(
      */
     inline fun <reified E : GameEvent> onEventOfType(crossinline onEvent: (E) -> Unit) {
         onEvent { event ->
-            if (event is E) { onEvent(event) }
+            if (event is E) {
+                onEvent(event)
+            }
         }
     }
 

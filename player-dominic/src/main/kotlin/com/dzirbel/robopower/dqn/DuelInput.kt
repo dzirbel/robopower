@@ -10,18 +10,30 @@ import org.jetbrains.kotlinx.dl.api.core.layer.core.Input
 
 private const val NUM_DUELS_INCLUDED_IN_INPUT = 5
 
+private val cardValues = Card.values()
+
+// 367
 internal val duelBufferSize = Card.values().size.let { cards ->
     6 + cards + (Game.MAX_PLAYERS - 1) * (cards + 1) + cards + NUM_DUELS_INCLUDED_IN_INPUT * cards
 }
 
 val DuelInput = Input(duelBufferSize.toLong(), name = "duel input")
 
-fun PlayerState.toDuelInput(playedCard: Card, involvedPlayers: Set<Int>, previousRounds: List<DuelRound>): FloatArray {
-    val cards = Card.values()
+// TODO document
+fun PlayerState.baseDuelInput(involvedPlayers: Set<Int>, previousRounds: List<DuelRound>): FloatArray {
+    return toDuelInput(playedCard = null, involvedPlayers = involvedPlayers, previousRounds = previousRounds)
+}
+
+// TODO document
+fun FloatArray.setPlayedCard(playedCard: Card) {
+    this[0] = playedCard.ordinal.toFloat()
+}
+
+fun PlayerState.toDuelInput(playedCard: Card?, involvedPlayers: Set<Int>, previousRounds: List<DuelRound>): FloatArray {
     return buildFloatArray(duelBufferSize) {
         // card played in the duel; note that this is not part of the game state but corresponds to the "action"
         // dimension in Q-learning
-        add(playedCard.ordinal)
+        add(playedCard?.ordinal ?: -1)
 
         // number of active players
         add(gameState.activePlayerCount)
@@ -37,7 +49,7 @@ fun PlayerState.toDuelInput(playedCard: Card, involvedPlayers: Set<Int>, previou
         add(gameState.deck.discardPileSize)
 
         // cards in the player's hand, as a mapping from the card ordinal to the number of that card in the hand
-        for (card in cards) {
+        for (card in cardValues) {
             add(hand.count { it == card })
         }
 
@@ -48,9 +60,9 @@ fun PlayerState.toDuelInput(playedCard: Card, involvedPlayers: Set<Int>, previou
 
             val knownCards = cardTracker.knownCards[playerIndex]
             if (knownCards == null) {
-                repeat(cards.size) { add(0) }
+                repeat(cardValues.size) { add(0) }
             } else {
-                for (card in cards) {
+                for (card in cardValues) {
                     add(knownCards.count { it == card })
                 }
             }
@@ -58,7 +70,7 @@ fun PlayerState.toDuelInput(playedCard: Card, involvedPlayers: Set<Int>, previou
 
         // cards currently involved in this duel; an approximation of the duel state
         val cardsInPlay = previousRounds.cardsInPlay.flatMap { it.value }
-        for (card in cards) {
+        for (card in cardValues) {
             add(cardsInPlay.count { it == card })
         }
 
@@ -69,17 +81,15 @@ fun PlayerState.toDuelInput(playedCard: Card, involvedPlayers: Set<Int>, previou
             .take(NUM_DUELS_INCLUDED_IN_INPUT)
 
         duels.forEach { duel ->
-            for (card in cards) {
+            for (card in cardValues) {
                 val count = duel.result.rounds.sumOf { round -> round.playedCards.count { it.value == card } }
                 add(count)
             }
         }
 
         // pad for missing past duels (in the first few rounds)
-        if (duels.size < NUM_DUELS_INCLUDED_IN_INPUT) {
-            repeat(NUM_DUELS_INCLUDED_IN_INPUT - duels.size) {
-                repeat(cards.size) { add(0) }
-            }
+        repeat((NUM_DUELS_INCLUDED_IN_INPUT - duels.size) * cardValues.size) {
+            add(0)
         }
     }
 }

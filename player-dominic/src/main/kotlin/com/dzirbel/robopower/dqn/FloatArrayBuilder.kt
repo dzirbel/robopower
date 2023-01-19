@@ -1,5 +1,8 @@
 package com.dzirbel.robopower.dqn
 
+/**
+ * Simple DSL to build [FloatArray]s conveniently via [buildFloatArray].
+ */
 internal fun interface FloatArrayBuilder {
     fun add(number: Number)
 }

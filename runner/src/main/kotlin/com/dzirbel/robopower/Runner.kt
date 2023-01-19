@@ -9,9 +9,6 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
-import kotlin.time.ExperimentalTime
-import kotlin.time.TimeSource
-import kotlin.time.times
 
 object Runner {
     /**
@@ -21,7 +18,7 @@ object Runner {
      * @param printIncrementPercent whole-number percentage of [RunInput.games] when a progress message should be
      *  printed, e.g. 5 = 5%
      */
-    @OptIn(FlowPreview::class, ExperimentalTime::class)
+    @OptIn(FlowPreview::class)
     suspend fun run(
         input: RunInput,
         @Suppress("MagicNumber")
@@ -42,91 +39,81 @@ object Runner {
         var engineExceptions = 0
         var engineExceptionExample: Throwable? = null
 
-        val increment = printIncrementPercent?.let { it * input.games / 100 }
-        var gamesFinished = 0
-
         println("Running ${input.games} ${input.players.size}-player games with parallelism of ${input.concurrency}")
-        val start = TimeSource.Monotonic.markNow()
 
-        withContext(Dispatchers.Default) {
-            flow {
-                repeat(input.games) { emit(Unit) }
-            }
-                .flatMapMerge(concurrency = input.concurrency) {
-                    flow {
-                        val factories = if (input.randomizeOrder) {
-                            input.players.withIndex().shuffled()
-                        } else {
-                            input.players.withIndex().toList()
-                        }
-
-                        val result = runCatching {
-                            requireNotNull(Game(playerFactories = factories.map { it.value }).run())
-                        }
-
-                        emit(Pair(factories, result))
-                    }
+        val elapsed = withProgress(total = input.games, incrementPercent = printIncrementPercent) {
+            withContext(Dispatchers.Default) {
+                flow {
+                    repeat(input.games) { emit(Unit) }
                 }
-                .collect { (factories, result) ->
-                    result
-                        .onSuccess { gameResult ->
-                            factories.forEachIndexed { gameIndex, (originalIndex, _) ->
-                                val player = gameResult.game.gameState.players[gameIndex]
-                                playerLogicTime.compute(originalIndex) { _, duration ->
-                                    (duration ?: Duration.ZERO) + player.totalPlayerLogicTime
-                                }
+                    .flatMapMerge(concurrency = input.concurrency) {
+                        flow {
+                            val factories = if (input.randomizeOrder) {
+                                input.players.withIndex().shuffled()
+                            } else {
+                                input.players.withIndex().toList()
                             }
 
-                            roundCounts.add(gameResult.game.gameState.turnCount)
-                            when (gameResult) {
-                                is GameResult.Winner -> {
-                                    winCounts.add(factories[gameResult.winner].index)
-                                    winCountByPosition.add(gameResult.winner)
-                                }
-                                is GameResult.Tied -> {
-                                    totalTies++
-                                    tieCounts.addAll(gameResult.tiedPlayers.map { factories[it].index })
-                                    tieCountByPosition.addAll(gameResult.tiedPlayers)
-                                }
+                            val result = runCatching {
+                                requireNotNull(Game(playerFactories = factories.map { it.value }).run())
                             }
+
+                            emit(Pair(factories, result))
                         }
-                        .onFailure { throwable ->
-                            when (throwable) {
-                                is PlayerChoiceException -> {
-                                    val playerIndex = throwable.player.playerIndex
-                                    val factoryIndex = factories[playerIndex].index
-                                    playerChoiceExceptionExamples.putIfAbsent(factoryIndex, throwable)
-                                    playerChoiceExceptions.add(factoryIndex)
-                                }
-
-                                is PlayerThrownException -> {
-                                    val playerIndex = throwable.player.playerIndex
-                                    val factoryIndex = factories[playerIndex].index
-                                    playerThrownExceptionExamples.putIfAbsent(factoryIndex, throwable)
-                                    playerThrownExceptions.add(factoryIndex)
-                                }
-
-                                else -> {
-                                    if (engineExceptionExample == null) {
-                                        engineExceptionExample = throwable
+                    }
+                    .collect { (factories, result) ->
+                        result
+                            .onSuccess { gameResult ->
+                                factories.forEachIndexed { gameIndex, (originalIndex, _) ->
+                                    val player = gameResult.game.gameState.players[gameIndex]
+                                    playerLogicTime.compute(originalIndex) { _, duration ->
+                                        (duration ?: Duration.ZERO) + player.totalPlayerLogicTime
                                     }
-                                    engineExceptions++
+                                }
+
+                                roundCounts.add(gameResult.game.gameState.turnCount)
+                                when (gameResult) {
+                                    is GameResult.Winner -> {
+                                        winCounts.add(factories[gameResult.winner].index)
+                                        winCountByPosition.add(gameResult.winner)
+                                    }
+                                    is GameResult.Tied -> {
+                                        totalTies++
+                                        tieCounts.addAll(gameResult.tiedPlayers.map { factories[it].index })
+                                        tieCountByPosition.addAll(gameResult.tiedPlayers)
+                                    }
                                 }
                             }
-                        }
+                            .onFailure { throwable ->
+                                when (throwable) {
+                                    is PlayerChoiceException -> {
+                                        val playerIndex = throwable.player.playerIndex
+                                        val factoryIndex = factories[playerIndex].index
+                                        playerChoiceExceptionExamples.putIfAbsent(factoryIndex, throwable)
+                                        playerChoiceExceptions.add(factoryIndex)
+                                    }
 
-                    if (increment != null) {
-                        gamesFinished++
-                        if (gamesFinished > 0 && gamesFinished < input.games && gamesFinished % increment == 0) {
-                            val elapsed = start.elapsedNow()
-                            val timeRemaining = (input.games - gamesFinished) * (elapsed / gamesFinished)
-                            println("$gamesFinished / ${input.games} [$elapsed, approx $timeRemaining left]")
-                        }
+                                    is PlayerThrownException -> {
+                                        val playerIndex = throwable.player.playerIndex
+                                        val factoryIndex = factories[playerIndex].index
+                                        playerThrownExceptionExamples.putIfAbsent(factoryIndex, throwable)
+                                        playerThrownExceptions.add(factoryIndex)
+                                    }
+
+                                    else -> {
+                                        if (engineExceptionExample == null) {
+                                            engineExceptionExample = throwable
+                                        }
+                                        engineExceptions++
+                                    }
+                                }
+                            }
+
+                        onProgress()
                     }
-                }
+            }
         }
 
-        val elapsed = start.elapsedNow()
         val gamesPerSecond = (input.games / elapsed.toDouble(DurationUnit.SECONDS)).roundToInt()
         println("Done in $elapsed (avg ${elapsed / input.games} per game; $gamesPerSecond games/s)")
         println()

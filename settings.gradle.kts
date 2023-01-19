@@ -6,4 +6,5 @@ include(
     "player-dominic",
     "player-matthew",
     "runner",
+    "trainer",
 )
