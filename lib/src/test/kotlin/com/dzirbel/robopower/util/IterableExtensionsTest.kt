@@ -78,4 +78,20 @@ class IterableExtensionsTest {
         assertEquals(null, list.indexOfMinOrNull { null })
         assertEquals(null, list.minByNullableOrNull { null })
     }
+
+    @Test
+    fun `maxFirstIndexBy returns 0 without invoking selector for a single element`() {
+        val list = listOf(1)
+        var calls = 0
+        assertEquals(0, list.maxFirstIndexBy { it.also { calls++ } })
+        assertEquals(0, calls)
+    }
+
+    @Test
+    fun `maxFirstIndexBy returns the maximizing element with minimal calls to selector`() {
+        val list = listOf(1, 2, 3, 1, 1, 5, 1)
+        var calls = 0
+        assertEquals(list.indexOfMaxOrNull { it }, list.maxFirstIndexBy { it.also { calls++ } })
+        assertEquals(list.distinct().size, calls)
+    }
 }

@@ -91,3 +91,40 @@ fun <T, R : Comparable<R>> Iterable<T>.indexOfMinOrNull(selector: (T) -> R?): In
 
     return maxIndex
 }
+
+/**
+ * Returns the index of the first element in this [Iterable] maximizing [selector].
+ *
+ * Includes optimizations to invoke [selector] only when necessary: never if this [Iterable] has only a single
+ * element and saving the set of elements that it has been evaluated on so duplicates are skipped. As such, [T] must
+ * be properly hashable and [selector] must always evaluate to the same result on equal items.
+ */
+fun <T, R : Comparable<R>> Iterable<T>.maxFirstIndexBy(selector: (T) -> R): Int {
+    val iterator = iterator()
+
+    // short circuit without calling selector if there is only one element
+    val firstElement = iterator.next()
+    if (!iterator.hasNext()) {
+        return 0
+    }
+
+    var maxIndex = 0
+    var maxValue: R = selector(firstElement)
+    val seenElements = mutableSetOf(firstElement)
+
+    var index = 1
+    while (iterator.hasNext()) {
+        val element = iterator.next()
+        if (seenElements.add(element)) {
+            val value = selector(element)
+            if (value > maxValue) {
+                maxValue = value
+                maxIndex = index
+            }
+        }
+
+        index++
+    }
+
+    return maxIndex
+}
