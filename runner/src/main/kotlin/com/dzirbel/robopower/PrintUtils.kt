@@ -1,18 +1,38 @@
 package com.dzirbel.robopower
 
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.TimeSource
 import kotlin.time.times
 
+/**
+ * Builder scope for computation done [withProgress]; [onProgress] should be called whenever one iteration of progress
+ * has been completed.
+ */
 fun interface ProgressScope {
     fun onProgress()
 }
 
-// TODO document
-@OptIn(ExperimentalTime::class)
-inline fun withProgress(total: Int, incrementPercent: Int?, block: ProgressScope.() -> Unit): Duration {
+/**
+ * Print utility which logs user-readable progress on computation done in [block] to standard output and returns the
+ * [Duration] spend executing [block].
+ *
+ * [block] is invoked with a [ProgressScope] that implements the logging, and should invoke [ProgressScope.onProgress]
+ * whenever a unit of progress is completed. This allows (as opposed to e.g. having a for-loop inside [withProgress])
+ * [block] to organize its work concurrently and use the [ProgressScope.onProgress] callback arbitrarily.
+ * [ProgressScope.onProgress] should be called [total] times when [block] exists for the progress reports to be
+ * accurate.
+ */
+@OptIn(ExperimentalTime::class, ExperimentalContracts::class)
+fun withProgress(total: Int, incrementPercent: Int?, block: ProgressScope.() -> Unit): Duration {
+    contract {
+        callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+    }
+
     val start = TimeSource.Monotonic.markNow()
 
     val scope = if (incrementPercent == null) {

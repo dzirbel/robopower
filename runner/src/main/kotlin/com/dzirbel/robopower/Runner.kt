@@ -5,7 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runBlocking
 import kotlin.math.roundToInt
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
@@ -19,7 +19,7 @@ object Runner {
      *  printed, e.g. 5 = 5%
      */
     @OptIn(FlowPreview::class)
-    suspend fun run(
+    fun run(
         input: RunInput,
         @Suppress("MagicNumber")
         printIncrementPercent: Int? = if (input.verbose) 5 else 20,
@@ -42,7 +42,7 @@ object Runner {
         println("Running ${input.games} ${input.players.size}-player games with parallelism of ${input.concurrency}")
 
         val elapsed = withProgress(total = input.games, incrementPercent = printIncrementPercent) {
-            withContext(Dispatchers.Default) {
+            runBlocking(Dispatchers.Default) {
                 flow {
                     repeat(input.games) { emit(Unit) }
                 }
