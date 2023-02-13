@@ -24,13 +24,16 @@ import kotlin.time.TimeSource
 private const val PLAYERS = 4
 
 // number of games played in each batch, after which the model is re-fit with the data from these games
-private const val BATCH_SIZE = 5
+private const val BATCH_SIZE = 20
 
 // number of batches to run
-private const val BATCHES = 50
+private const val BATCHES = 100
 
-private const val WIN_REWARD = 5
-private const val TIE_REWARD = 2
+// the reward for each game is the inverse of placement (so higher y-values are better)
+// a bonus is added for a decisive win and slightly subtracted for a tied win
+// other ties are rewarded with the tied place, e.g. players in a 3-way tie for 2nd are rewarded as if they placed 2nd
+private const val DECISIVE_WIN_REWARD_BONUS = 2f
+private const val TIED_WIN_REWARD_BONUS = -0.2f
 
 private const val FIT_EPOCHS = 5
 private const val FIT_BATCH_SIZE = 32
@@ -54,8 +57,20 @@ private val validationBasePlayer: Player.Factory = PseudoCodePseudoPlayer
 // other players in the game when validating model
 private val validationPlayers = listOf(
     PseudoCodePseudoPlayer,
-    SimplePlayer,
-    RandomPlayer,
+    // PseudoCodePseudoPlayer with dueling from SimplePlayer
+    CompositePlayer.fromPlayers(
+        name = "Simple",
+        discarder = PseudoCodePseudoPlayer,
+        spier = PseudoCodePseudoPlayer,
+        dueler = SimplePlayer,
+    ),
+    // PseudoCodePseudoPlayer with dueling from RandomPlayer
+    CompositePlayer.fromPlayers(
+        name = "Random",
+        discarder = PseudoCodePseudoPlayer,
+        spier = PseudoCodePseudoPlayer,
+        dueler = RandomPlayer,
+    ),
 )
 
 // number of games to run after training to see performance, set to 0 to skip
@@ -64,7 +79,7 @@ private const val VALIDATION_GAMES = 1_000
 // integer percentage at which progress reports are printed during training and validation
 private const val PROGRESS_INCREMENT_PERCENT = 10
 
-private data class TrainingData(val inputs: List<FloatArray>, val result: Int)
+private data class TrainingData(val inputs: List<FloatArray>, val result: Float)
 
 fun main() {
     modelLayers.use { model ->
@@ -121,10 +136,12 @@ private fun runGame(model: GraphTrainableModel): List<TrainingData> {
     val data = mutableListOf<TrainingData>()
 
     repeat(PLAYERS) { playerIndex ->
-        // TODO gradual rewards for placing second, etc
-        val reward = when (result) {
-            is GameResult.Winner -> if (result.winner == playerIndex) WIN_REWARD else 0
-            is GameResult.Tied -> if (playerIndex in result.tiedPlayers) TIE_REWARD else 0
+        val place: Int = requireNotNull(result.playersToPlace[playerIndex])
+
+        // TODO consider adding a reward for lasting longer as well (based on player elimination round)
+        var reward: Float = (PLAYERS - place).toFloat()
+        if (place == 1) {
+            reward += if (result.decisive) DECISIVE_WIN_REWARD_BONUS else TIED_WIN_REWARD_BONUS
         }
 
         data.add(TrainingData(inputs = trainingStrategies[playerIndex].inputs, result = reward))
@@ -136,7 +153,7 @@ private fun runGame(model: GraphTrainableModel): List<TrainingData> {
 private fun fitData(model: GraphTrainableModel, data: List<TrainingData>) {
     val dataset = OnHeapDataset.create(
         features = data.flatMap { (inputs, _) -> inputs }.toTypedArray(),
-        labels = data.flatMap { (inputs, reward) -> List(inputs.size) { reward.toFloat() } }.toFloatArray(),
+        labels = data.flatMap { (inputs, reward) -> List(inputs.size) { reward } }.toFloatArray(),
     )
 
     model.fit(dataset = dataset, epochs = FIT_EPOCHS, batchSize = FIT_BATCH_SIZE)

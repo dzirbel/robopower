@@ -25,11 +25,12 @@ class CompositePlayer(
     }
 
     private class Factory(
+        private val name: String? = null,
         private val discardStrategy: (playerState: PlayerState) -> DiscardStrategy,
         private val spyStrategy: (playerState: PlayerState) -> SpyStrategy,
         private val duelStrategy: (playerState: PlayerState) -> DuelStrategy,
     ) : Player.Factory {
-        override fun playerName(playerIndex: Int) = "Composite"
+        override fun playerName(playerIndex: Int) = name ?: "Composite"
 
         override fun create(playerState: PlayerState): Player {
             return CompositePlayer(
@@ -49,8 +50,14 @@ class CompositePlayer(
          * Note that each of these strategies creates a separate [Player], so [Player]-specific state is not shared
          * between them.
          */
-        fun fromPlayers(discarder: Player.Factory, spier: Player.Factory, dueler: Player.Factory): Player.Factory {
+        fun fromPlayers(
+            name: String? = null,
+            discarder: Player.Factory,
+            spier: Player.Factory,
+            dueler: Player.Factory,
+        ): Player.Factory {
             return Factory(
+                name = name,
                 discardStrategy = discarder::create,
                 spyStrategy = spier::create,
                 duelStrategy = dueler::create,

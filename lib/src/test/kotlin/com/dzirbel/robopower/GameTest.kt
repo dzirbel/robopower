@@ -23,7 +23,9 @@ class GameTest {
 
         val result = game.run()
 
-        assertEquals(1, (result as GameResult.Winner).winner)
+        requireNotNull(result)
+        assertEquals(1, result.winner)
+        assertEquals(mapOf(0 to 2, 1 to 1), result.playersToPlace) // 0 index player got 2nd, 1 index player got 1st
         assertEquals(Game.STARTING_CARDS, game.gameState.turnCount) // 1 turn for each starting card
 
         // note discarded and played cards by player 2 are cycled because retaining them puts them at the end of the

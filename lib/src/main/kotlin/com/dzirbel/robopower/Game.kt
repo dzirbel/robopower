@@ -17,6 +17,16 @@ class Game(
      */
     val gameState: GameState = GameState(deck = deck, playerFactories = playerFactories)
 
+    // map from player index to their place in the game
+    // e.g. for a game of 8 players:
+    // - player who is eliminated first gets 8th place (8)
+    // - two players are eliminated in the game duel both get 6th place (6)
+    // - a player is eliminated in the discard phase of a round gets 5th place (5)
+    // - a player eliminated in the duel phase of the same round gets a 4th place (4)
+    // - another player is eliminated in 3rd place (3)
+    // - the two remaining players are eliminated together (by a counteract) and both get first place (1)
+    private val places: MutableMap<Int, Int> = mutableMapOf()
+
     /**
      * The [PlayerState]s for each player; centralized in [Game] so that if there are multiple players for the same
      * index (for composite players which rely on multiple player instances), they all share the same state (and
@@ -126,14 +136,8 @@ class Game(
         )
 
         if (remainingCards == 0) {
-            gameState.activePlayerCount--
-            gameState.onEvent(
-                GameEvent.PlayerEliminated(gameState = gameState, eliminatedPlayerIndex = spiedPlayerIndex),
-            )
-
-            if (gameState.activePlayerCount == 1) {
-                return GameResult.Winner(game = this, winner = gameState.upPlayerIndex)
-            }
+            onPlayersEliminated(eliminatedPlayers = setOf(spiedPlayerIndex))
+                ?.let { return it }
         }
 
         gameState.assertGameInvariants()
@@ -171,24 +175,28 @@ class Game(
             gameState.players.forEachIndexed { index, player -> if (player.isActive) add(index) }
         }
         return if (remainingPlayerIndices.size < involvedPlayerIndices.size) {
-            val eliminatedPlayers = involvedPlayerIndices.minus(remainingPlayerIndices)
-            for (eliminatedPlayer in eliminatedPlayers) {
-                gameState.onEvent(
-                    GameEvent.PlayerEliminated(gameState = gameState, eliminatedPlayerIndex = eliminatedPlayer),
-                )
-            }
-            gameState.activePlayerCount -= eliminatedPlayers.size
-
-            // check if the game has ended
-            when (gameState.activePlayerCount) {
-                0 -> GameResult.Tied(game = this, tiedPlayers = involvedPlayerIndices)
-                1 -> GameResult.Winner(game = this, winner = remainingPlayerIndices.first())
-                else -> null
-            }
+            onPlayersEliminated(eliminatedPlayers = involvedPlayerIndices.minus(remainingPlayerIndices))
         } else {
             null
         }
             .also { gameState.assertGameInvariants(afterDuel = true) }
+    }
+
+    private fun onPlayersEliminated(eliminatedPlayers: Set<Int>): GameResult? {
+        gameState.activePlayerCount -= eliminatedPlayers.size
+        val remainingPlayers = gameState.activePlayerCount
+        for (eliminatedPlayer in eliminatedPlayers) {
+            places[eliminatedPlayer] = remainingPlayers + 1
+            gameState.onEvent(
+                GameEvent.PlayerEliminated(gameState = gameState, eliminatedPlayerIndex = eliminatedPlayer),
+            )
+        }
+
+        if (remainingPlayers == 1) {
+            places[gameState.activePlayers.first().index] = 1
+        }
+
+        return if (remainingPlayers <= 1) GameResult(game = this, playersToPlace = places) else null
     }
 
     companion object {

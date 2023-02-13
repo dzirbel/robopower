@@ -72,16 +72,16 @@ object Runner {
                                 }
 
                                 roundCounts.add(gameResult.game.gameState.turnCount)
-                                when (gameResult) {
-                                    is GameResult.Winner -> {
-                                        winCounts.add(factories[gameResult.winner].index)
-                                        winCountByPosition.add(gameResult.winner)
-                                    }
-                                    is GameResult.Tied -> {
-                                        totalTies++
-                                        tieCounts.addAll(gameResult.tiedPlayers.map { factories[it].index })
-                                        tieCountByPosition.addAll(gameResult.tiedPlayers)
-                                    }
+
+                                val winners = gameResult.winners
+                                if (winners.size == 1) {
+                                    val winner = winners.first()
+                                    winCounts.add(factories[winner].index)
+                                    winCountByPosition.add(winner)
+                                } else {
+                                    totalTies++
+                                    tieCounts.addAll(winners.map { factories[it].index })
+                                    tieCountByPosition.addAll(winners)
                                 }
                             }
                             .onFailure { throwable ->
