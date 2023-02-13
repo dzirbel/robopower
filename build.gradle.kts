@@ -54,6 +54,10 @@ subprojects {
     afterEvaluate {
         val hasDetekt = extensions.findByName("detekt") != null
 
+        kotlin {
+            jvmToolchain(jdkVersion = 16)
+        }
+
         dependencies {
             if (hasDetekt) {
                 detektPlugins(libs.detekt.formatting)
