@@ -53,7 +53,9 @@ abstract class Player(val playerState: PlayerState) : DiscardStrategy, SpyStrate
          */
         fun create(playerState: PlayerState): Player
 
-        // TODO document
+        /**
+         * Creates a [Factory] based on this one but substituting the given strategies via a [CompositePlayer].
+         */
         fun withStrategies(
             discardStrategy: OptionalDiscardStrategy? = null,
             spyStrategy: OptionalSpyStrategy? = null,

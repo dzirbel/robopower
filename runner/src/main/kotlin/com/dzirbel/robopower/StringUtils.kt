@@ -18,8 +18,16 @@ fun formatPercent(numerator: Int, denominator: Int, padFrontChar: Char? = null, 
         }
 }
 
-// TODO document
-// TODO unit test
+/**
+ * Formats this [Duration] into a single numeric value with the non-zero smallest unit, for example "1.33 hr" instead of
+ * "1 hr 20 min".
+ *
+ * @param padFrontChar character to pad the start of the string to two whole characters (so e.g. 3 minutes is aligned
+ *  with 30 minutes), null for no padding. Note that durations 100 hours or longer may not be aligned.
+ * @param decimals number of decimal characters in the string
+ *
+ * TODO unit test
+ */
 fun Duration.formatAsSingleValue(
     padFrontChar: Char? = ' ',
     decimals: Int = 2,
@@ -39,10 +47,15 @@ fun Duration.formatAsSingleValue(
     return if (padFrontChar != null) base.padWholeNumber(digits = 2) else base
 }
 
-// TODO document
-// TODO unit test
+/**
+ * Pads the start of this numeric [String] with [padChar] to be at least [digits] long.
+ *
+ * For example, for the string 12.34 with digits=4, two characters of padding will be prepended.
+ *
+ * TODO unit test
+ */
 fun String.padWholeNumber(digits: Int, padChar: Char = ' '): String {
-    val leading = substringBefore('.').length // TODO avoid building the string, just get the count
+    val leading = indexOf('.')
     return if (leading < digits) {
         buildString {
             repeat(digits - leading) { append(padChar) }
