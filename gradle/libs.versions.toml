@@ -3,7 +3,7 @@ coroutines = "1.6.4" # https://github.com/Kotlin/kotlinx.coroutines
 detekt = "1.22.0" # https://github.com/detekt/detekt
 junit = "5.9.2" # https://junit.org/junit5/
 kotlin = "1.8.10" # https://kotlinlang.org/docs/releases.html
-kotlindl = "0.5.0" # https://github.com/Kotlin/kotlindl
+kotlindl = "0.5.1" # https://github.com/Kotlin/kotlindl
 
 [libraries]
 coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
